@@ -17,21 +17,31 @@ import { useGalleryStore } from './stores/galleryStore';
 import { useSettingsStore } from './stores/settingsStore';
 import { useAuthStore } from './stores/authStore';
 import { isSupabaseConfigured } from './lib/supabase';
+import EffectsPanel from './features/tools/effects/EffectsPanel';
+import TransformPanel from './features/tools/effects/TransformPanel';
 
 import LayersPanel from './features/layers/LayersPanel';
 
 // ─── Right Panel ─────────────────────────────────────────────────────
 
 function RightPanel() {
-  const { activeTool } = useCanvasStore();
+  const { activeTool, selectedObjectIds } = useCanvasStore();
   const isKid = useSettingsStore((s) => s.mode === 'kid');
+  const hasSelection = selectedObjectIds.length > 0;
 
   return (
     <div className="flex flex-col gap-2.5 overflow-y-auto max-h-[calc(100vh-80px)] pr-1 scrollbar-thin">
+      {/* Tool-specific panels */}
       {activeTool === 'draw' && <BrushPanel />}
       {activeTool === 'text' && <TextPanel />}
       {activeTool === 'shape' && <ShapePanel />}
-      {activeTool === 'select' && <GarmentPicker />}
+      {activeTool === 'select' && !hasSelection && <GarmentPicker />}
+
+      {/* Object property panels (when something is selected) */}
+      {hasSelection && !isKid && <EffectsPanel />}
+      {hasSelection && !isKid && <TransformPanel />}
+
+      {/* Always visible */}
       <ColorPanel />
       {!isKid && <LayersPanel />}
     </div>
