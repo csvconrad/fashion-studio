@@ -18,45 +18,7 @@ import { useSettingsStore } from './stores/settingsStore';
 import { useAuthStore } from './stores/authStore';
 import { isSupabaseConfigured } from './lib/supabase';
 
-// ─── Layer Panel ─────────────────────────────────────────────────────
-
-function LayerPanel() {
-  const { layers, activeLayerId, selectLayer, addLayer, removeLayer, toggleLayerVisibility, toggleLayerLock } = useCanvasStore();
-
-  return (
-    <div className="bg-white rounded-2xl shadow-sm p-3 border border-gray-100">
-      <div className="flex items-center justify-between mb-2">
-        <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Calques</h3>
-        <button onClick={() => addLayer()} className="text-[10px] px-2 py-0.5 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">+</button>
-      </div>
-      <div className="space-y-0.5">
-        {[...layers].reverse().map((layer) => (
-          <div
-            key={layer.id}
-            onClick={() => selectLayer(layer.id)}
-            className={`flex items-center gap-1 px-2 py-1.5 rounded-lg text-[11px] cursor-pointer transition-colors ${
-              layer.id === activeLayerId ? 'bg-purple-50 border border-purple-200' : 'hover:bg-gray-50 border border-transparent'
-            }`}
-          >
-            <button onClick={(e) => { e.stopPropagation(); toggleLayerVisibility(layer.id); }}
-              className={`w-4 h-4 flex items-center justify-center ${layer.visible ? 'text-gray-500' : 'text-gray-300'}`}>
-              {layer.visible ? '\u25C9' : '\u25CB'}
-            </button>
-            <button onClick={(e) => { e.stopPropagation(); toggleLayerLock(layer.id); }}
-              className={`w-4 h-4 flex items-center justify-center text-[9px] ${layer.locked ? 'text-red-400' : 'text-gray-300'}`}>
-              {layer.locked ? '\u{1F512}' : '\u{1F513}'}
-            </button>
-            <span className="flex-1 truncate">{layer.type === 'garment' ? `\u{1F455} ${layer.name}` : layer.name}</span>
-            {layers.length > 1 && layer.type !== 'garment' && (
-              <button onClick={(e) => { e.stopPropagation(); removeLayer(layer.id); }}
-                className="w-4 h-4 flex items-center justify-center text-gray-300 hover:text-red-400">&times;</button>
-            )}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
+import LayersPanel from './features/layers/LayersPanel';
 
 // ─── Right Panel ─────────────────────────────────────────────────────
 
@@ -71,7 +33,7 @@ function RightPanel() {
       {activeTool === 'shape' && <ShapeLibrary />}
       {activeTool === 'select' && <GarmentPicker />}
       <ColorPicker />
-      {!isKid && <LayerPanel />}
+      {!isKid && <LayersPanel />}
     </div>
   );
 }

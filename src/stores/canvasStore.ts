@@ -16,7 +16,11 @@ export interface CanvasLayer {
   name: string;
   visible: boolean;
   locked: boolean;
+  opacity: number;          // 0–1
   type?: 'garment' | 'user';
+  groupId?: string;         // parent group layer id
+  isGroup?: boolean;        // true = this is a folder
+  collapsed?: boolean;      // group collapsed in panel
 }
 
 interface Snapshot {
@@ -105,6 +109,14 @@ interface CanvasStore {
   toggleLayerVisibility: (id: string) => void;
   toggleLayerLock: (id: string) => void;
   moveLayer: (id: string, direction: 'up' | 'down') => void;
+  reorderLayerTo: (id: string, toIndex: number) => void;
+  setLayerOpacity: (id: string, opacity: number) => void;
+  duplicateLayer: (id: string) => void;
+  mergeLayerDown: (id: string) => void;
+
+  // Groups
+  createGroup: (name?: string) => void;
+  toggleGroupCollapse: (id: string) => void;
 
   // Object CRUD — content-agnostic
   addObject: (type: string, options?: Record<string, unknown>) => void;
@@ -234,6 +246,7 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
         name: 'Calque 1',
         visible: true,
         locked: false,
+        opacity: 1,
       };
       set({ layers: [layer], activeLayerId: layer.id, selectedObjectIds: [], canUndo: false, canRedo: false });
       // Push initial empty snapshot after canvas is ready
@@ -257,6 +270,7 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
       name: name ?? `Calque ${layers.length + 1}`,
       visible: true,
       locked: false,
+      opacity: 1,
     };
     const newLayers = [...layers, layer];
     set({ layers: newLayers, activeLayerId: layer.id });
@@ -334,6 +348,109 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
     set(h);
   },
 
+  reorderLayerTo: (id, toIndex) => {
+    const { layers } = get();
+    const fromIndex = layers.findIndex((l) => l.id === id);
+    if (fromIndex < 0 || fromIndex === toIndex) return;
+    const clamped = Math.max(0, Math.min(toIndex, layers.length - 1));
+    const newLayers = [...layers];
+    const [moved] = newLayers.splice(fromIndex, 1);
+    newLayers.splice(clamped, 0, moved);
+    reorderCanvasObjects(newLayers);
+    set({ layers: newLayers });
+    const h = _pushSnapshot({ ...get(), layers: newLayers });
+    set(h);
+  },
+
+  setLayerOpacity: (id, opacity) => {
+    const clamped = Math.max(0, Math.min(1, opacity));
+    objectsByLayer(id).forEach((obj) => { obj.opacity = clamped; });
+    _canvas?.renderAll();
+    set({ layers: get().layers.map((l) => (l.id === id ? { ...l, opacity: clamped } : l)) });
+  },
+
+  duplicateLayer: (id) => {
+    if (!_canvas) return;
+    const { layers } = get();
+    const source = layers.find((l) => l.id === id);
+    if (!source || source.isGroup) return;
+
+    const newLayerId = crypto.randomUUID();
+    const newLayer: CanvasLayer = {
+      ...structuredClone(source),
+      id: newLayerId,
+      name: `${source.name} (copie)`,
+    };
+
+    // Clone fabric objects
+    const sourceObjects = objectsByLayer(id);
+    sourceObjects.forEach((obj) => {
+      obj.clone().then((cloned: FabricObject) => {
+        const d = (cloned as unknown as { data?: Record<string, unknown> }).data ?? {};
+        (cloned as unknown as { data: Record<string, unknown> }).data = {
+          ...d,
+          objectId: crypto.randomUUID(),
+          layerId: newLayerId,
+        };
+        cloned.opacity = newLayer.opacity;
+        cloned.set({ left: (cloned.left ?? 0) + 15, top: (cloned.top ?? 0) + 15 });
+        _canvas!.add(cloned);
+        _canvas!.renderAll();
+      });
+    });
+
+    const idx = layers.findIndex((l) => l.id === id);
+    const newLayers = [...layers];
+    newLayers.splice(idx + 1, 0, newLayer);
+    set({ layers: newLayers, activeLayerId: newLayerId });
+    const h = _pushSnapshot({ layers: newLayers, activeLayerId: newLayerId });
+    set(h);
+  },
+
+  mergeLayerDown: (id) => {
+    if (!_canvas) return;
+    const { layers } = get();
+    const idx = layers.findIndex((l) => l.id === id);
+    if (idx <= 0) return; // no layer below
+    const below = layers[idx - 1];
+    if (below.type === 'garment' || below.isGroup) return;
+
+    // Re-tag all objects from this layer to the layer below
+    objectsByLayer(id).forEach((obj) => {
+      const d = (obj as unknown as { data: Record<string, unknown> }).data;
+      d.layerId = below.id;
+    });
+    _canvas.renderAll();
+
+    const newLayers = layers.filter((l) => l.id !== id);
+    const newActive = below.id;
+    set({ layers: newLayers, activeLayerId: newActive });
+    const h = _pushSnapshot({ layers: newLayers, activeLayerId: newActive });
+    set(h);
+  },
+
+  // ── Groups ──────────────────────────────────────
+
+  createGroup: (name) => {
+    const { layers } = get();
+    const group: CanvasLayer = {
+      id: crypto.randomUUID(),
+      name: name ?? `Groupe ${layers.filter((l) => l.isGroup).length + 1}`,
+      visible: true,
+      locked: false,
+      opacity: 1,
+      isGroup: true,
+      collapsed: false,
+    };
+    set({ layers: [...layers, group] });
+    const h = _pushSnapshot({ ...get(), layers: [...layers, group] });
+    set(h);
+  },
+
+  toggleGroupCollapse: (id) => {
+    set({ layers: get().layers.map((l) => (l.id === id ? { ...l, collapsed: !l.collapsed } : l)) });
+  },
+
   // ── Object CRUD ───────────────────────────────────
 
   addObject: (type, options = {}) => {
@@ -346,6 +463,7 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
     if (!obj) return;
 
     obj.visible = layer.visible;
+    obj.opacity = layer.opacity;
     if (layer.locked) {
       obj.selectable = false;
       obj.evented = false;
@@ -392,6 +510,7 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
       name: 'Calque 1',
       visible: true,
       locked: false,
+      opacity: 1,
     };
     set({ layers: [layer], activeLayerId: layer.id, selectedObjectIds: [] });
     const h = _pushSnapshot({ layers: [layer], activeLayerId: layer.id });

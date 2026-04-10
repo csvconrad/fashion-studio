@@ -38,6 +38,7 @@ export const useGarmentStore = create<GarmentStore>((set, get) => ({
       name: template.name,
       visible: true,
       locked: true,
+      opacity: 1,
       type: 'garment',
     };
 
