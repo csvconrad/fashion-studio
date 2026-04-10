@@ -5,6 +5,7 @@ import { getShape } from '../tools/shapeData';
 import { getGeoShape } from '../tools/shapes/shapeGeometry';
 import { BrushEngine } from '../tools/brushes/BrushEngine';
 import { getBrush } from '../tools/brushes/brushData';
+import { loadFont } from '../tools/text/fontData';
 
 export default function DesignCanvas() {
   const canvasElRef = useRef<HTMLCanvasElement>(null);
@@ -63,12 +64,14 @@ export default function DesignCanvas() {
       if (state.activeTool === 'text') {
         if (opt.target) return;
         const pt = opt.scenePoint;
-        state.addObject('textbox', {
-          left: pt.x - 60, top: pt.y - 16,
-          text: 'Texte', fontSize: state.fontSize, fontFamily: state.fontFamily,
-          fill: state.activeColor, width: 200,
+        loadFont(state.fontFamily).then(() => {
+          state.addObject('textbox', {
+            left: pt.x - 60, top: pt.y - 16,
+            text: 'Texte', fontSize: state.fontSize, fontFamily: state.fontFamily,
+            fill: state.activeColor, width: 250,
+          });
+          state.setActiveTool('select');
         });
-        state.setActiveTool('select');
       }
 
       if (state.activeTool === 'shape' && state.pendingShapeId) {
