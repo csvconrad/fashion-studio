@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Canvas as FabricCanvas } from 'fabric';
 import { useCanvasStore, CANVAS_WIDTH, CANVAS_HEIGHT } from '../../stores/canvasStore';
 import { getShape } from '../tools/shapeData';
+import { getGeoShape } from '../tools/shapes/shapeGeometry';
 import { BrushEngine } from '../tools/brushes/BrushEngine';
 import { getBrush } from '../tools/brushes/brushData';
 
@@ -71,13 +72,22 @@ export default function DesignCanvas() {
       }
 
       if (state.activeTool === 'shape' && state.pendingShapeId) {
-        const shape = getShape(state.pendingShapeId);
-        if (!shape) return;
+        const id = state.pendingShapeId;
+        let pathData: string | undefined;
+
+        if (id.startsWith('geo:')) {
+          const geo = getGeoShape(id.slice(4));
+          pathData = geo?.pathData;
+        } else {
+          pathData = getShape(id)?.pathData;
+        }
+
+        if (!pathData) return;
         const pt = opt.scenePoint;
         state.addObject('path', {
-          path: shape.pathData, left: pt.x - 75, top: pt.y - 75,
+          path: pathData, left: pt.x - 75, top: pt.y - 75,
           fill: state.activeColor, scaleX: 1.5, scaleY: 1.5,
-          stroke: '#00000015', strokeWidth: 1,
+          stroke: '#00000020', strokeWidth: 1,
         });
       }
     });

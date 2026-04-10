@@ -4,7 +4,7 @@ import DesignCanvas from './features/canvas/DesignCanvas';
 import GarmentPicker from './features/garments/GarmentPicker';
 import ColorPicker from './features/tools/ColorPicker';
 import Toolbar from './features/tools/Toolbar';
-import ShapeLibrary from './features/tools/ShapeLibrary';
+import ShapePanel from './features/tools/shapes/ShapePanel';
 import BrushPanel from './features/tools/brushes/BrushPanel';
 import TextTool from './features/tools/TextTool';
 import Home from './features/home/Home';
@@ -30,7 +30,7 @@ function RightPanel() {
     <div className="flex flex-col gap-2.5 overflow-y-auto max-h-[calc(100vh-80px)] pr-1 scrollbar-thin">
       {activeTool === 'draw' && <BrushPanel />}
       {activeTool === 'text' && <TextTool />}
-      {activeTool === 'shape' && <ShapeLibrary />}
+      {activeTool === 'shape' && <ShapePanel />}
       {activeTool === 'select' && <GarmentPicker />}
       <ColorPicker />
       {!isKid && <LayersPanel />}
