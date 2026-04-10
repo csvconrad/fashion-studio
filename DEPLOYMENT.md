@@ -1,68 +1,59 @@
 # Deploiement — Atelier de Mode
 
-## Prerequis
+## Production
 
-- Compte [Vercel](https://vercel.com) (gratuit)
-- Repo GitHub (public ou prive)
+URL : **https://fashion-studio-peach.vercel.app**
+Repo : **https://github.com/csvconrad/fashion-studio**
 
-## Etapes
+Chaque `git push origin master` declenche un deploiement automatique sur Vercel.
 
-### 1. Pousser le code sur GitHub
+## Variables d'environnement (Vercel)
 
-```bash
-cd /Users/cg/Documents/fashion-studio
+| Variable | Valeur | Requis |
+|----------|--------|--------|
+| `VITE_SUPABASE_URL` | `https://elemjzqybybmflnauaii.supabase.co` | Oui (pour auth + cloud) |
+| `VITE_SUPABASE_ANON_KEY` | Cle legacy `eyJ...` depuis Supabase > Settings > API | Oui |
+| `VITE_UNSPLASH_ACCESS_KEY` | Cle depuis unsplash.com/developers | Non (active la recherche photos) |
 
-# Si pas encore de remote:
-gh repo create fashion-studio --public --source=. --push
+Sans les variables Supabase, l'app fonctionne en mode local (IndexedDB, pas de login).
 
-# Sinon:
-git push origin main
-```
+## PWA
 
-### 2. Connecter a Vercel
+L'app est installable sur tablette/telephone :
+- **iPad/iPhone** : ouvrir dans Safari → Partager → "Sur l'ecran d'accueil"
+- **Android** : Chrome affiche automatiquement "Ajouter a l'ecran d'accueil"
 
-1. Aller sur [vercel.com/new](https://vercel.com/new)
-2. Cliquer **Import Git Repository**
-3. Selectionner le repo `fashion-studio`
-4. Vercel detecte automatiquement Vite — les parametres par defaut sont corrects:
-   - **Framework Preset**: Vite
-   - **Build Command**: `npm run build`
-   - **Output Directory**: `dist`
-5. Cliquer **Deploy**
+## Stack
 
-### 3. C'est tout
-
-Vercel deploie automatiquement a chaque push sur `main`.
-
-Le fichier `vercel.json` configure le SPA routing (toutes les URLs redirigent vers `index.html`).
-
-## Domaine personnalise (optionnel)
-
-1. Dans le dashboard Vercel du projet → **Settings** → **Domains**
-2. Ajouter le domaine souhaite (ex: `atelier.example.com`)
-3. Configurer le DNS chez le registrar (CNAME vers `cname.vercel-dns.com`)
-
-## Variables d'environnement
-
-Aucune variable d'environnement requise pour le moment.
-Quand Supabase sera integre, ajouter:
-- `VITE_SUPABASE_URL`
-- `VITE_SUPABASE_ANON_KEY`
+- React 19 + TypeScript + Vite + Tailwind CSS 4
+- Fabric.js 7 (canvas) + perfect-freehand (pinceaux)
+- Zustand 5 (state) + React Router 7
+- Supabase (auth + PostgreSQL) + IndexedDB fallback
+- Iconify API (200k+ stickers)
 
 ## Build local
 
 ```bash
-npm run build     # Build de production dans dist/
-npm run preview   # Previsualiser le build local
+npm install
+npm run dev       # Dev server avec HMR
+npm run build     # Build production dans dist/
+npm run preview   # Previsualiser le build
 ```
 
-## Structure du build
+## Base de donnees
 
-```
-dist/
-├── index.html          # Point d'entree SPA
-├── assets/
-│   ├── index-*.css     # Tailwind CSS (~25 KB gzip)
-│   └── index-*.js      # App bundle (~175 KB gzip)
-└── favicon.svg
-```
+Schema SQL dans `supabase/schema.sql`. A executer dans Supabase SQL Editor :
+- Table `profiles` (profils enfants lies a un compte parent)
+- Table `designs` (creations par profil)
+- Row Level Security active
+
+## Ajouter du contenu
+
+- **Gabarits vetements** : `src/features/garments/templates.ts` — ajouter un objet avec zones SVG
+- **Motifs decoratifs** : `src/features/tools/shapeData.ts` — ajouter un path SVG 100x100
+- **Formes geometriques** : `src/features/tools/shapes/shapeGeometry.ts`
+- **Pinceaux** : `src/features/tools/brushes/brushData.ts`
+- **Palettes couleurs** : `src/features/tools/colors/palettes.ts`
+- **Polices** : `src/features/tools/text/fontData.ts` — Google Fonts
+- **Templates texte** : `src/features/tools/text/textTemplates.ts`
+- **Templates demarrage** : `src/features/home/starterTemplates.ts`

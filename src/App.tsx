@@ -22,6 +22,7 @@ import TransformPanel from './features/tools/effects/TransformPanel';
 import ImagePanel from './features/tools/import/ImagePanel';
 import BackgroundRemover from './features/tools/import/BackgroundRemover';
 import LayersPanel from './features/layers/LayersPanel';
+import Onboarding from './features/onboarding/Onboarding';
 
 // ─── Command Palette (Ctrl+K) ────────────────────────────────────────
 
@@ -150,6 +151,15 @@ function Editor() {
   const profile = useAuthStore((s) => s.profile);
   const [cmdOpen, setCmdOpen] = useState(false);
 
+  // ── Autosave every 30s ──
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const g = useGalleryStore.getState();
+      if (g.currentDesignId) g.saveOverCurrent();
+    }, 30_000);
+    return () => clearInterval(interval);
+  }, []);
+
   // ── All keyboard shortcuts ──
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
@@ -244,6 +254,7 @@ function Editor() {
       <SaveDialog />
       <ExportDialog />
       <CommandPalette open={cmdOpen} onClose={() => setCmdOpen(false)} />
+      <Onboarding />
     </div>
   );
 }

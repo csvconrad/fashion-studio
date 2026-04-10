@@ -3,7 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { useGalleryStore } from '../../stores/galleryStore';
 import { useSettingsStore } from '../../stores/settingsStore';
 import { useAuthStore } from '../../stores/authStore';
+import { useGarmentStore } from '../../stores/garmentStore';
 import { isSupabaseConfigured } from '../../lib/supabase';
+import { starterTemplates } from './starterTemplates';
 
 export default function Home() {
   const navigate = useNavigate();
@@ -52,6 +54,24 @@ export default function Home() {
         >
           + Nouvelle creation
         </button>
+      </div>
+
+      {/* Starter templates */}
+      <div className="max-w-4xl mx-auto px-4 mb-8">
+        <h2 className="text-sm font-bold text-gray-400 uppercase tracking-widest mb-3">Commencer avec un modele</h2>
+        <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin">
+          {starterTemplates.map((t) => (
+            <button
+              key={t.id}
+              onClick={() => { handleNew(); setTimeout(() => { useGarmentStore.getState().loadGarment(t.garmentId); navigate('/editor'); }, 100); }}
+              className="flex-shrink-0 w-28 bg-white rounded-xl shadow-sm p-3 text-center hover:shadow-md hover:scale-105 transition-all group"
+            >
+              <div className="text-3xl mb-1">{t.icon}</div>
+              <p className="text-[11px] font-medium text-gray-700">{t.name}</p>
+              <p className="text-[9px] text-gray-400 mt-0.5">{t.desc}</p>
+            </button>
+          ))}
+        </div>
       </div>
 
       {/* Designs grid */}
