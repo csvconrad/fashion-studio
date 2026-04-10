@@ -152,6 +152,10 @@ export default function DesignCanvas() {
         canvas.selection = false;
         canvas.defaultCursor = 'crosshair';
         break;
+      case 'image':
+        canvas.selection = true;
+        canvas.defaultCursor = 'default';
+        break;
     }
     canvas.renderAll();
   }, [activeTool, getCanvas]);

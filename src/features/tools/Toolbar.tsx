@@ -8,6 +8,7 @@ const tools: { id: ToolMode; label: string }[] = [
   { id: 'draw',   label: 'Pinceau' },
   { id: 'text',   label: 'Texte' },
   { id: 'shape',  label: 'Motifs' },
+  { id: 'image',  label: 'Image' },
 ];
 
 export default function Toolbar() {
@@ -60,6 +61,11 @@ export default function Toolbar() {
           {tool.id === 'shape' && (
             <svg viewBox="0 0 24 24" className={iconSz} fill="currentColor">
               <path d="M12,2 L14.5,9 L22,9 L16,13.5 L18,21 L12,16.5 L6,21 L8,13.5 L2,9 L9.5,9 Z" />
+            </svg>
+          )}
+          {tool.id === 'image' && (
+            <svg viewBox="0 0 24 24" className={iconSz} fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" fill="currentColor" /><polyline points="21 15 16 10 5 21" />
             </svg>
           )}
         </button>

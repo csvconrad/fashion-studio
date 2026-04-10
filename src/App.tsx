@@ -19,6 +19,8 @@ import { useAuthStore } from './stores/authStore';
 import { isSupabaseConfigured } from './lib/supabase';
 import EffectsPanel from './features/tools/effects/EffectsPanel';
 import TransformPanel from './features/tools/effects/TransformPanel';
+import ImagePanel from './features/tools/import/ImagePanel';
+import BackgroundRemover from './features/tools/import/BackgroundRemover';
 
 import LayersPanel from './features/layers/LayersPanel';
 
@@ -35,11 +37,13 @@ function RightPanel() {
       {activeTool === 'draw' && <BrushPanel />}
       {activeTool === 'text' && <TextPanel />}
       {activeTool === 'shape' && <ShapePanel />}
+      {activeTool === 'image' && <ImagePanel />}
       {activeTool === 'select' && !hasSelection && <GarmentPicker />}
 
       {/* Object property panels (when something is selected) */}
       {hasSelection && !isKid && <EffectsPanel />}
       {hasSelection && !isKid && <TransformPanel />}
+      {hasSelection && !isKid && <BackgroundRemover />}
 
       {/* Always visible */}
       <ColorPanel />
