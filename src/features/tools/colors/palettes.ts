@@ -1,0 +1,100 @@
+// ─── 40 curated color palettes ───────────────────────────────────────
+
+export interface ColorPalette {
+  id: string;
+  name: string;
+  category: string;
+  colors: string[];
+}
+
+export const PALETTE_CATEGORIES = [
+  'Saisons', 'Ambiance', 'Style', 'Tendance', 'Mode',
+];
+
+export const palettes: ColorPalette[] = [
+  // ── Saisons ──────────────────────
+  { id: 'spring', name: 'Printemps', category: 'Saisons',
+    colors: ['#FFB7C5', '#FF69B4', '#98D8C8', '#7ED321', '#FDFD96'] },
+  { id: 'summer', name: 'Ete', category: 'Saisons',
+    colors: ['#FF6B6B', '#FFA07A', '#FFD93D', '#6BCB77', '#4D96FF'] },
+  { id: 'autumn', name: 'Automne', category: 'Saisons',
+    colors: ['#D4A574', '#C68642', '#8B4513', '#D2691E', '#F4A460'] },
+  { id: 'winter', name: 'Hiver', category: 'Saisons',
+    colors: ['#A8D8EA', '#AA96DA', '#FCBAD3', '#FFFFD2', '#B8E0D2'] },
+  // ── Ambiance ─────────────────────
+  { id: 'romantic', name: 'Romantique', category: 'Ambiance',
+    colors: ['#FFB6C1', '#FFC0CB', '#DB7093', '#C71585', '#FF1493'] },
+  { id: 'dark', name: 'Sombre', category: 'Ambiance',
+    colors: ['#1A1A2E', '#16213E', '#0F3460', '#533483', '#E94560'] },
+  { id: 'joyful', name: 'Joyeux', category: 'Ambiance',
+    colors: ['#FF6F61', '#FFD166', '#06D6A0', '#118AB2', '#EF476F'] },
+  { id: 'nature', name: 'Nature', category: 'Ambiance',
+    colors: ['#2D6A4F', '#40916C', '#52B788', '#74C69D', '#B7E4C7'] },
+  { id: 'urban', name: 'Urbain', category: 'Ambiance',
+    colors: ['#2B2D42', '#8D99AE', '#EDF2F4', '#EF233C', '#D90429'] },
+  { id: 'zen', name: 'Zen', category: 'Ambiance',
+    colors: ['#E8D5B7', '#B8A38E', '#8E806A', '#D4C5A9', '#F5EFE7'] },
+  { id: 'tropical', name: 'Tropical', category: 'Ambiance',
+    colors: ['#FF6B6B', '#FF8E53', '#FFD93D', '#6EC898', '#2EC4B6'] },
+  { id: 'ocean', name: 'Ocean', category: 'Ambiance',
+    colors: ['#003F88', '#0077B6', '#00B4D8', '#90E0EF', '#CAF0F8'] },
+  // ── Style ────────────────────────
+  { id: 'pastel', name: 'Pastel', category: 'Style',
+    colors: ['#FFB3BA', '#FFDFBA', '#FFFFBA', '#BAFFC9', '#BAE1FF'] },
+  { id: 'neon', name: 'Neon', category: 'Style',
+    colors: ['#FF00FF', '#00FFFF', '#FF00AA', '#AAFF00', '#FF6600'] },
+  { id: 'vintage', name: 'Vintage', category: 'Style',
+    colors: ['#D4A574', '#C9B99A', '#A0826D', '#8B6F47', '#E8D5B7'] },
+  { id: 'mono-gray', name: 'Gris', category: 'Style',
+    colors: ['#F8F9FA', '#DEE2E6', '#ADB5BD', '#6C757D', '#343A40'] },
+  { id: 'mono-blue', name: 'Bleu mono', category: 'Style',
+    colors: ['#E3F2FD', '#90CAF9', '#42A5F5', '#1976D2', '#0D47A1'] },
+  { id: 'candy', name: 'Bonbon', category: 'Style',
+    colors: ['#FF6B9D', '#C084FC', '#7DD3FC', '#6EE7B7', '#FDE047'] },
+  { id: 'earth', name: 'Terre', category: 'Style',
+    colors: ['#5C4033', '#8B6F47', '#C19A6B', '#DEB887', '#F5DEB3'] },
+  { id: 'rainbow', name: 'Arc-en-ciel', category: 'Style',
+    colors: ['#FF0000', '#FF7700', '#FFFF00', '#00FF00', '#0000FF', '#8B00FF'] },
+  { id: 'sunset', name: 'Coucher de soleil', category: 'Style',
+    colors: ['#FF6B35', '#F7C59F', '#EFEFD0', '#004E89', '#1A659E'] },
+  // ── Tendance ─────────────────────
+  { id: 'trend-sage', name: 'Sauge', category: 'Tendance',
+    colors: ['#A3B18A', '#588157', '#3A5A40', '#DAD7CD', '#344E41'] },
+  { id: 'trend-terracotta', name: 'Terracotta', category: 'Tendance',
+    colors: ['#E07A5F', '#F2CC8F', '#81B29A', '#F4F1DE', '#3D405B'] },
+  { id: 'trend-lavender', name: 'Lavande', category: 'Tendance',
+    colors: ['#E6E6FA', '#D8BFD8', '#DDA0DD', '#BA55D3', '#9370DB'] },
+  { id: 'trend-dusty', name: 'Dusty rose', category: 'Tendance',
+    colors: ['#D4A5A5', '#C9929A', '#B07D8E', '#9A6782', '#7C5069'] },
+  { id: 'trend-matcha', name: 'Matcha', category: 'Tendance',
+    colors: ['#D4E09B', '#A8C256', '#7CB518', '#5A8D00', '#3E6B00'] },
+  { id: 'trend-berry', name: 'Baie', category: 'Tendance',
+    colors: ['#7B2D8E', '#A3207C', '#D1186B', '#E8305B', '#F14A54'] },
+  { id: 'trend-minimal', name: 'Minimaliste', category: 'Tendance',
+    colors: ['#FFFFFF', '#F5F5F5', '#E0E0E0', '#9E9E9E', '#212121'] },
+  { id: 'trend-nordic', name: 'Nordique', category: 'Tendance',
+    colors: ['#EDE8E2', '#D5CEC3', '#A69C94', '#8B7E74', '#5C5248'] },
+  // ── Mode ─────────────────────────
+  { id: 'denim', name: 'Denim', category: 'Mode',
+    colors: ['#1A3A5C', '#2B5278', '#4A6FA5', '#7B9CC0', '#A8C0DB'] },
+  { id: 'streetwear', name: 'Streetwear', category: 'Mode',
+    colors: ['#000000', '#FF0000', '#FFFFFF', '#808080', '#FFD700'] },
+  { id: 'bohemian', name: 'Boheme', category: 'Mode',
+    colors: ['#D4A574', '#E8D5B7', '#8B4513', '#CD853F', '#F5DEB3'] },
+  { id: 'punk', name: 'Punk', category: 'Mode',
+    colors: ['#000000', '#FF0000', '#FF00FF', '#00FF00', '#FFFFFF'] },
+  { id: 'preppy', name: 'Preppy', category: 'Mode',
+    colors: ['#003399', '#CC0000', '#FFFFFF', '#006633', '#FFD700'] },
+  { id: 'kawaii-mode', name: 'Kawaii', category: 'Mode',
+    colors: ['#FFB7C5', '#FFDFD3', '#FFF0DB', '#D4F0F0', '#CCE2CB'] },
+  { id: 'glamour', name: 'Glamour', category: 'Mode',
+    colors: ['#FFD700', '#C0C0C0', '#000000', '#8B0000', '#FFFACD'] },
+  { id: 'sport', name: 'Sport', category: 'Mode',
+    colors: ['#FF4500', '#1E90FF', '#32CD32', '#FFD700', '#000000'] },
+  { id: 'eco', name: 'Eco-mode', category: 'Mode',
+    colors: ['#B5C99A', '#87986A', '#718355', '#97A97C', '#CFE1B9'] },
+  { id: 'couture', name: 'Haute couture', category: 'Mode',
+    colors: ['#1C1C1C', '#B8860B', '#FFFFF0', '#800020', '#708090'] },
+  { id: 'y2k', name: 'Y2K', category: 'Mode',
+    colors: ['#FF69B4', '#00CED1', '#BA55D3', '#FFD700', '#C0C0C0'] },
+];

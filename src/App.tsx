@@ -2,7 +2,7 @@ import { Routes, Route } from 'react-router-dom';
 import { useEffect } from 'react';
 import DesignCanvas from './features/canvas/DesignCanvas';
 import GarmentPicker from './features/garments/GarmentPicker';
-import ColorPicker from './features/tools/ColorPicker';
+import ColorPanel from './features/tools/colors/ColorPanel';
 import Toolbar from './features/tools/Toolbar';
 import ShapePanel from './features/tools/shapes/ShapePanel';
 import BrushPanel from './features/tools/brushes/BrushPanel';
@@ -32,7 +32,7 @@ function RightPanel() {
       {activeTool === 'text' && <TextPanel />}
       {activeTool === 'shape' && <ShapePanel />}
       {activeTool === 'select' && <GarmentPicker />}
-      <ColorPicker />
+      <ColorPanel />
       {!isKid && <LayersPanel />}
     </div>
   );
