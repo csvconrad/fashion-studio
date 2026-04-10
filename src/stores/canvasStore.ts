@@ -85,7 +85,9 @@ interface CanvasStore {
   activeTool: ToolMode;
   activeColor: string;
   pendingShapeId: string | null;
+  activeBrushId: string;
   brushWidth: number;
+  brushOpacity: number;
   fontSize: number;
   fontFamily: string;
 
@@ -97,7 +99,9 @@ interface CanvasStore {
   setActiveTool: (tool: ToolMode) => void;
   setActiveColor: (color: string) => void;
   setPendingShape: (id: string | null) => void;
+  setActiveBrush: (id: string) => void;
   setBrushWidth: (w: number) => void;
+  setBrushOpacity: (o: number) => void;
   setFontSize: (s: number) => void;
   setFontFamily: (f: string) => void;
 
@@ -220,7 +224,9 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
   activeTool: 'select',
   activeColor: '#EC4899',
   pendingShapeId: null,
-  brushWidth: 5,
+  activeBrushId: 'pen',
+  brushWidth: 4,
+  brushOpacity: 1,
   fontSize: 32,
   fontFamily: 'Comic Sans MS',
 
@@ -229,7 +235,9 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
   setActiveTool: (tool) => set({ activeTool: tool, ...(tool !== 'shape' ? { pendingShapeId: null } : {}) }),
   setActiveColor: (color) => set({ activeColor: color }),
   setPendingShape: (id) => set({ pendingShapeId: id, activeTool: 'shape' }),
+  setActiveBrush: (id) => set({ activeBrushId: id, activeTool: 'draw' }),
   setBrushWidth: (w) => set({ brushWidth: w }),
+  setBrushOpacity: (o) => set({ brushOpacity: Math.max(0, Math.min(1, o)) }),
   setFontSize: (s) => set({ fontSize: s }),
   setFontFamily: (f) => set({ fontFamily: f }),
 

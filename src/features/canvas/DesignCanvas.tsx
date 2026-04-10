@@ -1,11 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
-import { Canvas as FabricCanvas, PencilBrush } from 'fabric';
+import { Canvas as FabricCanvas } from 'fabric';
 import { useCanvasStore, CANVAS_WIDTH, CANVAS_HEIGHT } from '../../stores/canvasStore';
 import { getShape } from '../tools/shapeData';
+import { BrushEngine } from '../tools/brushes/BrushEngine';
+import { getBrush } from '../tools/brushes/brushData';
 
 export default function DesignCanvas() {
   const canvasElRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const brushEngineRef = useRef<BrushEngine | null>(null);
   const [scale, setScale] = useState(1);
 
   const {
@@ -17,7 +20,9 @@ export default function DesignCanvas() {
     setSelectedObjectIds,
     activeTool,
     activeColor,
+    activeBrushId,
     brushWidth,
+    brushOpacity,
     setActiveTool,
   } = useCanvasStore();
 
@@ -34,9 +39,6 @@ export default function DesignCanvas() {
       preserveObjectStacking: true,
     });
 
-    // Set up default brush
-    canvas.freeDrawingBrush = new PencilBrush(canvas);
-
     setCanvas(canvas);
 
     // Selection events
@@ -51,39 +53,20 @@ export default function DesignCanvas() {
     canvas.on('selection:created', handleSelection);
     canvas.on('selection:updated', handleSelection);
     canvas.on('selection:cleared', () => setSelectedObjectIds([]));
-
-    // Commit to history after user drags/resizes/rotates
     canvas.on('object:modified', () => commitToHistory());
-
-    // Tag drawn paths with layer data and commit
-    canvas.on('path:created', (opt) => {
-      const state = useCanvasStore.getState();
-      const p = opt.path as unknown as { data?: Record<string, string> };
-      p.data = {
-        objectId: crypto.randomUUID(),
-        layerId: state.activeLayerId,
-      };
-      state.commitToHistory();
-    });
 
     // Click-to-place for text and shape tools
     canvas.on('mouse:down', (opt) => {
       const state = useCanvasStore.getState();
 
       if (state.activeTool === 'text') {
-        // Only place text if clicking empty space (no target) or explicitly on canvas
         if (opt.target) return;
         const pt = opt.scenePoint;
         state.addObject('textbox', {
-          left: pt.x - 60,
-          top: pt.y - 16,
-          text: 'Texte',
-          fontSize: state.fontSize,
-          fontFamily: state.fontFamily,
-          fill: state.activeColor,
-          width: 200,
+          left: pt.x - 60, top: pt.y - 16,
+          text: 'Texte', fontSize: state.fontSize, fontFamily: state.fontFamily,
+          fill: state.activeColor, width: 200,
         });
-        // Switch to select so user can edit the text immediately
         state.setActiveTool('select');
       }
 
@@ -92,16 +75,10 @@ export default function DesignCanvas() {
         if (!shape) return;
         const pt = opt.scenePoint;
         state.addObject('path', {
-          path: shape.pathData,
-          left: pt.x - 75,
-          top: pt.y - 75,
-          fill: state.activeColor,
-          scaleX: 1.5,
-          scaleY: 1.5,
-          stroke: '#00000015',
-          strokeWidth: 1,
+          path: shape.pathData, left: pt.x - 75, top: pt.y - 75,
+          fill: state.activeColor, scaleX: 1.5, scaleY: 1.5,
+          stroke: '#00000015', strokeWidth: 1,
         });
-        // Stay in shape mode for rapid placement
       }
     });
 
@@ -112,69 +89,116 @@ export default function DesignCanvas() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // ── BrushEngine lifecycle ─────────────────────────
+
+  useEffect(() => {
+    const canvas = getCanvas();
+    if (!canvas) return;
+
+    const brushDef = getBrush(activeBrushId) ?? getBrush('pen')!;
+    const engine = new BrushEngine(canvas, brushDef, activeColor);
+    engine.setSize(brushWidth);
+    engine.setOpacity(brushOpacity);
+
+    engine.onStrokeComplete = (path) => {
+      const state = useCanvasStore.getState();
+      const d = (path as unknown as { data?: Record<string, unknown> });
+      d.data = {
+        objectId: crypto.randomUUID(),
+        layerId: state.activeLayerId,
+      };
+      state.commitToHistory();
+    };
+
+    brushEngineRef.current = engine;
+  }, [activeBrushId, activeColor, brushWidth, brushOpacity, getCanvas]);
+
   // ── Sync tool mode with canvas ────────────────────
 
   useEffect(() => {
     const canvas = getCanvas();
     if (!canvas) return;
 
+    // Disable Fabric's built-in drawing in all modes — we use BrushEngine
+    canvas.isDrawingMode = false;
+
     switch (activeTool) {
       case 'select':
-        canvas.isDrawingMode = false;
         canvas.selection = true;
         canvas.defaultCursor = 'default';
-        canvas.getObjects().forEach((obj) => {
-          if ((obj as unknown as { data?: { zoneId?: string } }).data?.zoneId) {
-            obj.hoverCursor = 'pointer';
-          }
-        });
         break;
       case 'draw':
-        canvas.isDrawingMode = true;
         canvas.selection = false;
-        if (canvas.freeDrawingBrush) {
-          canvas.freeDrawingBrush.color = activeColor;
-          canvas.freeDrawingBrush.width = brushWidth;
-        }
+        canvas.defaultCursor = 'crosshair';
         break;
       case 'text':
-        canvas.isDrawingMode = false;
         canvas.selection = false;
         canvas.defaultCursor = 'text';
         break;
       case 'shape':
-        canvas.isDrawingMode = false;
         canvas.selection = false;
         canvas.defaultCursor = 'crosshair';
         break;
     }
     canvas.renderAll();
-  }, [activeTool, activeColor, brushWidth, getCanvas]);
+  }, [activeTool, getCanvas]);
 
-  // ── Keep brush color/width in sync while drawing ──
+  // ── Pointer events for BrushEngine (draw mode) ────
 
   useEffect(() => {
     const canvas = getCanvas();
-    if (!canvas || activeTool !== 'draw' || !canvas.freeDrawingBrush) return;
-    canvas.freeDrawingBrush.color = activeColor;
-    canvas.freeDrawingBrush.width = brushWidth;
-  }, [activeColor, brushWidth, activeTool, getCanvas]);
+    if (!canvas) return;
+
+    const getScaled = (e: PointerEvent): { x: number; y: number; pressure: number } => {
+      const rect = (canvas as unknown as { lowerCanvasEl: HTMLCanvasElement }).lowerCanvasEl.getBoundingClientRect();
+      const scaleX = CANVAS_WIDTH / rect.width;
+      const scaleY = CANVAS_HEIGHT / rect.height;
+      return {
+        x: (e.clientX - rect.left) * scaleX,
+        y: (e.clientY - rect.top) * scaleY,
+        pressure: e.pressure || 0.5,
+      };
+    };
+
+    const el = (canvas as unknown as { upperCanvasEl: HTMLCanvasElement }).upperCanvasEl;
+
+    const onDown = (e: PointerEvent) => {
+      if (useCanvasStore.getState().activeTool !== 'draw') return;
+      const p = getScaled(e);
+      brushEngineRef.current?.onPointerDown(p.x, p.y, p.pressure);
+    };
+    const onMove = (e: PointerEvent) => {
+      if (useCanvasStore.getState().activeTool !== 'draw') return;
+      const p = getScaled(e);
+      brushEngineRef.current?.onPointerMove(p.x, p.y, p.pressure);
+    };
+    const onUp = () => {
+      if (useCanvasStore.getState().activeTool !== 'draw') return;
+      brushEngineRef.current?.onPointerUp();
+    };
+
+    el.addEventListener('pointerdown', onDown);
+    el.addEventListener('pointermove', onMove);
+    el.addEventListener('pointerup', onUp);
+    el.addEventListener('pointerleave', onUp);
+
+    return () => {
+      el.removeEventListener('pointerdown', onDown);
+      el.removeEventListener('pointermove', onMove);
+      el.removeEventListener('pointerup', onUp);
+      el.removeEventListener('pointerleave', onUp);
+    };
+  }, [getCanvas]);
 
   // ── Responsive scaling ────────────────────────────
 
   useEffect(() => {
     const container = containerRef.current;
     if (!container) return;
-
-    const update = () => {
-      const w = container.clientWidth;
-      setScale(Math.min(w / CANVAS_WIDTH, 1));
-    };
-
+    const update = () => setScale(Math.min(container.clientWidth / CANVAS_WIDTH, 1));
     const observer = new ResizeObserver(update);
     observer.observe(container);
     update();
-
     return () => observer.disconnect();
   }, []);
 
@@ -183,26 +207,16 @@ export default function DesignCanvas() {
   useEffect(() => {
     const handler = (e: KeyboardEvent) => {
       const meta = e.metaKey || e.ctrlKey;
-      if (meta && e.key === 'z' && !e.shiftKey) {
-        e.preventDefault();
-        undo();
-      } else if (meta && e.key === 'z' && e.shiftKey) {
-        e.preventDefault();
-        useCanvasStore.getState().redo();
-      } else if (meta && e.key === 'y') {
-        e.preventDefault();
-        useCanvasStore.getState().redo();
-      } else if ((e.key === 'Delete' || e.key === 'Backspace') && !meta) {
-        if ((e.target as HTMLElement).tagName === 'INPUT') return;
-        if ((e.target as HTMLElement).tagName === 'TEXTAREA') return;
-        // Don't delete while editing a textbox on canvas
+      if (meta && e.key === 'z' && !e.shiftKey) { e.preventDefault(); undo(); }
+      else if (meta && e.key === 'z' && e.shiftKey) { e.preventDefault(); useCanvasStore.getState().redo(); }
+      else if (meta && e.key === 'y') { e.preventDefault(); useCanvasStore.getState().redo(); }
+      else if ((e.key === 'Delete' || e.key === 'Backspace') && !meta) {
+        if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement).tagName)) return;
         const canvas = getCanvas();
         if (canvas && (canvas as unknown as { _activeObject?: { isEditing?: boolean } })._activeObject?.isEditing) return;
         e.preventDefault();
         removeObject();
-      } else if (e.key === 'Escape') {
-        setActiveTool('select');
-      }
+      } else if (e.key === 'Escape') { setActiveTool('select'); }
     };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
@@ -212,18 +226,10 @@ export default function DesignCanvas() {
 
   return (
     <div ref={containerRef} className="w-full">
-      <div
-        className="mx-auto"
-        style={{ width: CANVAS_WIDTH * scale, height: CANVAS_HEIGHT * scale }}
-      >
+      <div className="mx-auto" style={{ width: CANVAS_WIDTH * scale, height: CANVAS_HEIGHT * scale }}>
         <div
           className="rounded-xl shadow-[0_4px_24px_rgba(0,0,0,0.10)] overflow-hidden"
-          style={{
-            width: CANVAS_WIDTH,
-            height: CANVAS_HEIGHT,
-            transform: `scale(${scale})`,
-            transformOrigin: 'top left',
-          }}
+          style={{ width: CANVAS_WIDTH, height: CANVAS_HEIGHT, transform: `scale(${scale})`, transformOrigin: 'top left' }}
         >
           <canvas ref={canvasElRef} />
         </div>
