@@ -16,8 +16,6 @@ export default function DesignCanvas() {
   const {
     setCanvas,
     getCanvas,
-    removeObject,
-    undo,
     commitToHistory,
     setSelectedObjectIds,
     activeTool,
@@ -25,7 +23,6 @@ export default function DesignCanvas() {
     activeBrushId,
     brushWidth,
     brushOpacity,
-    setActiveTool,
   } = useCanvasStore();
 
   // ── Initialize Fabric canvas ──────────────────────
@@ -93,6 +90,25 @@ export default function DesignCanvas() {
           stroke: '#00000020', strokeWidth: 1,
         });
       }
+    });
+
+    // Track cursor position for status bar
+    canvas.on('mouse:move', (opt) => {
+      if (opt.scenePoint) {
+        useCanvasStore.getState().setCursorPos(opt.scenePoint.x, opt.scenePoint.y);
+      }
+    });
+
+    // Zoom with mouse wheel
+    canvas.on('mouse:wheel', (opt) => {
+      const e = opt.e as WheelEvent;
+      e.preventDefault();
+      const delta = e.deltaY;
+      const state = useCanvasStore.getState();
+      const newZoom = Math.max(0.25, Math.min(3, state.zoomLevel + (delta > 0 ? -0.1 : 0.1)));
+      state.setZoomLevel(newZoom);
+      canvas.setZoom(newZoom);
+      canvas.renderAll();
     });
 
     return () => {
@@ -219,25 +235,7 @@ export default function DesignCanvas() {
     return () => observer.disconnect();
   }, []);
 
-  // ── Keyboard shortcuts ────────────────────────────
-
-  useEffect(() => {
-    const handler = (e: KeyboardEvent) => {
-      const meta = e.metaKey || e.ctrlKey;
-      if (meta && e.key === 'z' && !e.shiftKey) { e.preventDefault(); undo(); }
-      else if (meta && e.key === 'z' && e.shiftKey) { e.preventDefault(); useCanvasStore.getState().redo(); }
-      else if (meta && e.key === 'y') { e.preventDefault(); useCanvasStore.getState().redo(); }
-      else if ((e.key === 'Delete' || e.key === 'Backspace') && !meta) {
-        if (['INPUT', 'TEXTAREA'].includes((e.target as HTMLElement).tagName)) return;
-        const canvas = getCanvas();
-        if (canvas && (canvas as unknown as { _activeObject?: { isEditing?: boolean } })._activeObject?.isEditing) return;
-        e.preventDefault();
-        removeObject();
-      } else if (e.key === 'Escape') { setActiveTool('select'); }
-    };
-    window.addEventListener('keydown', handler);
-    return () => window.removeEventListener('keydown', handler);
-  }, [undo, removeObject, getCanvas, setActiveTool]);
+  // Keyboard shortcuts are handled in App.tsx
 
   // ── Render ────────────────────────────────────────
 
@@ -245,7 +243,7 @@ export default function DesignCanvas() {
     <div ref={containerRef} className="w-full">
       <div className="mx-auto" style={{ width: CANVAS_WIDTH * scale, height: CANVAS_HEIGHT * scale }}>
         <div
-          className="rounded-xl shadow-[0_4px_24px_rgba(0,0,0,0.10)] overflow-hidden"
+          className="rounded-lg shadow-[0_4px_40px_rgba(0,0,0,0.4)] overflow-hidden ring-1 ring-white/10"
           style={{ width: CANVAS_WIDTH, height: CANVAS_HEIGHT, transform: `scale(${scale})`, transformOrigin: 'top left' }}
         >
           <canvas ref={canvasElRef} />

@@ -21,17 +21,17 @@ export default function Toolbar() {
   const iconSz = isKid ? 'w-7 h-7' : 'w-5 h-5';
 
   const toolBtn = (active: boolean) =>
-    `${sz} flex items-center justify-center rounded-2xl transition-all active:scale-90 ${
+    `${sz} flex items-center justify-center rounded-xl transition-all active:scale-90 ${
       active
-        ? 'bg-purple-500 text-white shadow-lg scale-105'
-        : 'bg-white text-gray-600 shadow-sm hover:bg-purple-50 hover:text-purple-500'
+        ? 'bg-purple-500/20 text-purple-400 ring-1 ring-purple-500/40'
+        : 'text-white/40 hover:bg-white/5 hover:text-white/70'
     }`;
 
   const actionBtn = (disabled = false) =>
-    `${isKid ? 'w-11 h-11' : 'w-9 h-9'} flex items-center justify-center rounded-xl transition-all active:scale-90 ${
+    `${isKid ? 'w-11 h-11' : 'w-9 h-9'} flex items-center justify-center rounded-lg transition-all active:scale-90 ${
       disabled
-        ? 'bg-gray-100 text-gray-300 cursor-not-allowed'
-        : 'bg-white text-gray-500 shadow-sm hover:bg-gray-100'
+        ? 'text-white/10 cursor-not-allowed'
+        : 'text-white/30 hover:bg-white/5 hover:text-white/60'
     }`;
 
   return (
@@ -71,7 +71,7 @@ export default function Toolbar() {
         </button>
       ))}
 
-      <div className="w-6 h-px bg-gray-200 my-0.5" />
+      <div className="w-6 h-px bg-white/10 my-0.5" />
 
       {/* Undo / Redo */}
       <button onClick={undo} disabled={!canUndo} className={actionBtn(!canUndo)} title="Annuler (Ctrl+Z)">
@@ -101,7 +101,7 @@ export default function Toolbar() {
         </>
       )}
 
-      <div className="w-6 h-px bg-gray-200 my-0.5" />
+      <div className="w-6 h-px bg-white/10 my-0.5" />
 
       {/* Save / Export / Gallery */}
       <button onClick={() => currentDesignId ? saveOverCurrent() : openSaveDialog()} className={actionBtn()} title="Sauvegarder (Ctrl+S)">

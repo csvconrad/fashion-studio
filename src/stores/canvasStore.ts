@@ -41,6 +41,7 @@ let _canvas: FabricCanvas | null = null;
 let _history: Snapshot[] = [];
 let _historyIndex = -1;
 let _isRestoring = false; // prevents snapshot push during undo/redo
+let _clipboard: FabricObject | null = null;
 
 function _takeSnapshot(state: { layers: CanvasLayer[]; activeLayerId: string }): Snapshot | null {
   if (!_canvas) return null;
@@ -90,6 +91,17 @@ interface CanvasStore {
   brushOpacity: number;
   fontSize: number;
   fontFamily: string;
+
+  // Viewport
+  zoomLevel: number;
+  cursorPos: { x: number; y: number };
+
+  // Clipboard
+  copySelection: () => void;
+  pasteClipboard: () => void;
+  duplicateSelection: () => void;
+  setZoomLevel: (z: number) => void;
+  setCursorPos: (x: number, y: number) => void;
 
   // Canvas lifecycle
   setCanvas: (canvas: FabricCanvas | null) => void;
@@ -229,6 +241,60 @@ export const useCanvasStore = create<CanvasStore>((set, get) => ({
   brushOpacity: 1,
   fontSize: 32,
   fontFamily: 'Comic Sans MS',
+  zoomLevel: 1,
+  cursorPos: { x: 0, y: 0 },
+
+  // ── Clipboard + viewport ────────────────────────
+
+  copySelection: () => {
+    if (!_canvas) return;
+    const active = _canvas.getActiveObject();
+    if (!active) return;
+    active.clone().then((cloned: FabricObject) => {
+      _clipboard = cloned;
+    });
+  },
+
+  pasteClipboard: () => {
+    if (!_canvas || !_clipboard) return;
+    _clipboard.clone().then((cloned: FabricObject) => {
+      const state = get();
+      cloned.set({
+        left: (cloned.left ?? 0) + 20,
+        top: (cloned.top ?? 0) + 20,
+      });
+      const d = (cloned as unknown as { data?: Record<string, unknown> });
+      d.data = { objectId: crypto.randomUUID(), layerId: state.activeLayerId };
+      _canvas!.add(cloned);
+      _canvas!.setActiveObject(cloned);
+      _canvas!.renderAll();
+      const h = _pushSnapshot(state);
+      set(h);
+    });
+  },
+
+  duplicateSelection: () => {
+    if (!_canvas) return;
+    const active = _canvas.getActiveObject();
+    if (!active) return;
+    active.clone().then((cloned: FabricObject) => {
+      const state = get();
+      cloned.set({
+        left: (cloned.left ?? 0) + 20,
+        top: (cloned.top ?? 0) + 20,
+      });
+      const d = (cloned as unknown as { data?: Record<string, unknown> });
+      d.data = { objectId: crypto.randomUUID(), layerId: state.activeLayerId };
+      _canvas!.add(cloned);
+      _canvas!.setActiveObject(cloned);
+      _canvas!.renderAll();
+      const h = _pushSnapshot(state);
+      set(h);
+    });
+  },
+
+  setZoomLevel: (z) => set({ zoomLevel: Math.max(0.1, Math.min(5, z)) }),
+  setCursorPos: (x, y) => set({ cursorPos: { x, y } }),
 
   // ── Tool setters ────────────────────────────────
 
