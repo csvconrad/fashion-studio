@@ -2,11 +2,14 @@ import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGalleryStore } from '../../stores/galleryStore';
 import { useSettingsStore } from '../../stores/settingsStore';
+import { useAuthStore } from '../../stores/authStore';
+import { isSupabaseConfigured } from '../../lib/supabase';
 
 export default function Home() {
   const navigate = useNavigate();
   const { designs, refreshDesigns, loadDesign, duplicateDesign, renameDesign, deleteDesign, downloadDesign, newDesign } = useGalleryStore();
   const { mode, toggleMode } = useSettingsStore();
+  const { profile, clearProfile } = useAuthStore();
 
   const [renamingId, setRenamingId] = useState<string | null>(null);
   const [renameValue, setRenameValue] = useState('');
@@ -38,7 +41,10 @@ export default function Home() {
         <h1 className="text-4xl sm:text-5xl font-extrabold bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 bg-clip-text text-transparent">
           Atelier de Mode
         </h1>
-        <p className="text-gray-400 mt-2 text-sm">Cree et personnalise tes vetements !</p>
+        {profile && (
+          <p className="text-lg mt-2">{profile.avatar} <span className="font-semibold text-purple-600">{profile.name}</span></p>
+        )}
+        <p className="text-gray-400 mt-1 text-sm">Cree et personnalise tes vetements !</p>
 
         <button
           onClick={handleNew}
@@ -109,12 +115,19 @@ export default function Home() {
         )}
       </div>
 
-      {/* Settings toggle */}
-      <div className="fixed bottom-4 right-4">
+      {/* Bottom buttons */}
+      <div className="fixed bottom-4 right-4 flex gap-2">
+        {isSupabaseConfigured && profile && (
+          <button
+            onClick={clearProfile}
+            className="flex items-center gap-2 px-4 py-2 bg-white/80 backdrop-blur rounded-full shadow-md text-xs text-gray-500 hover:text-purple-600 transition-colors"
+          >
+            Changer de profil
+          </button>
+        )}
         <button
           onClick={toggleMode}
           className="flex items-center gap-2 px-4 py-2 bg-white/80 backdrop-blur rounded-full shadow-md text-xs text-gray-500 hover:text-purple-600 transition-colors"
-          title={mode === 'kid' ? 'Passer en mode avance' : 'Passer en mode enfant'}
         >
           <svg viewBox="0 0 20 20" className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth="1.5">
             <circle cx="10" cy="10" r="3" /><path d="M10 1v2M10 17v2M1 10h2M17 10h2M3.5 3.5l1.5 1.5M15 15l1.5 1.5M16.5 3.5l-1.5 1.5M5 15l-1.5 1.5" />
