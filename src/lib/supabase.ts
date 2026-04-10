@@ -9,3 +9,4 @@ export const isSupabaseConfigured = !!(url && key);
 export const supabase = isSupabaseConfigured
   ? createClient(url!, key!)
   : null;
+// force rebuild
