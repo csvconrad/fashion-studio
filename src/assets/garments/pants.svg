@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="180 150 440 640">
+  <path id="waistband" d="M 235,200 L 235,300 L 565,300 L 565,200 Q 400,168 235,200 Z" fill="#C8C8C8" stroke="#BDBDBD" stroke-width="2"/>
+  <path id="left-leg" d="M 235,300 L 210,760 L 390,760 L 400,300 Z" fill="#E0E0E0" stroke="#BDBDBD" stroke-width="2"/>
+  <path id="right-leg" d="M 400,300 L 410,760 L 590,760 L 565,300 Z" fill="#E0E0E0" stroke="#BDBDBD" stroke-width="2"/>
+</svg>

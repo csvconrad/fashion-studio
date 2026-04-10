@@ -1,182 +1,233 @@
-import { useEffect, useRef } from 'react';
-import { Canvas, Path, Circle } from 'fabric';
-import { useDesignStore } from '../../stores/designStore';
-
-// Mannequin SVG — silhouette simple et friendly
-const MANNEQUIN_PATH =
-  // Head
-  'M 40 10 Q 40 0 50 0 Q 60 0 60 10 Q 60 22 50 22 Q 40 22 40 10 Z ' +
-  // Neck
-  'M 47 22 L 53 22 L 53 28 L 47 28 Z ' +
-  // Body
-  'M 35 28 L 65 28 L 68 65 L 32 65 Z ' +
-  // Left arm
-  'M 35 28 L 25 32 L 20 55 L 26 56 L 30 38 L 35 35 Z ' +
-  // Right arm
-  'M 65 28 L 75 32 L 80 55 L 74 56 L 70 38 L 65 35 Z ' +
-  // Left leg
-  'M 35 65 L 42 65 L 43 110 L 33 110 Z ' +
-  // Right leg
-  'M 58 65 L 65 65 L 67 110 L 57 110 Z';
+import { useEffect, useRef, useState } from 'react';
+import { Canvas as FabricCanvas, PencilBrush } from 'fabric';
+import { useCanvasStore, CANVAS_WIDTH, CANVAS_HEIGHT } from '../../stores/canvasStore';
+import { getShape } from '../tools/shapeData';
 
 export default function DesignCanvas() {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const fabricRef = useRef<Canvas | null>(null);
-  const { currentDesign, activeColor, activeTool, selectedGarmentId, selectGarment, updateGarment } =
-    useDesignStore();
+  const canvasElRef = useRef<HTMLCanvasElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
 
-  // Initialize canvas
+  const {
+    setCanvas,
+    getCanvas,
+    removeObject,
+    undo,
+    commitToHistory,
+    setSelectedObjectIds,
+    activeTool,
+    activeColor,
+    brushWidth,
+    setActiveTool,
+  } = useCanvasStore();
+
+  // ── Initialize Fabric canvas ──────────────────────
+
   useEffect(() => {
-    if (!canvasRef.current) return;
+    if (!canvasElRef.current) return;
 
-    const canvas = new Canvas(canvasRef.current, {
-      width: 600,
-      height: 700,
-      backgroundColor: '#FFF9FB',
+    const canvas = new FabricCanvas(canvasElRef.current, {
+      width: CANVAS_WIDTH,
+      height: CANVAS_HEIGHT,
+      backgroundColor: '#FFFFFF',
       selection: true,
-    });
-    fabricRef.current = canvas;
-
-    // Draw mannequin (non-selectable background)
-    const mannequin = new Path(MANNEQUIN_PATH, {
-      left: 200,
-      top: 80,
-      fill: '#E8D5D0',
-      stroke: '#D4B5AD',
-      strokeWidth: 1,
-      scaleX: 3,
-      scaleY: 3.5,
-      selectable: false,
-      evented: false,
-    });
-    canvas.add(mannequin);
-
-    // Decorative circles for fun background
-    const dots = [
-      { x: 50, y: 50, r: 8, color: '#FFE4F0' },
-      { x: 540, y: 80, r: 12, color: '#E8E4FF' },
-      { x: 80, y: 600, r: 10, color: '#E4FFF0' },
-      { x: 520, y: 620, r: 6, color: '#FFF4E4' },
-    ];
-    dots.forEach((d) => {
-      const circle = new Circle({
-        left: d.x,
-        top: d.y,
-        radius: d.r,
-        fill: d.color,
-        selectable: false,
-        evented: false,
-      });
-      canvas.add(circle);
+      preserveObjectStacking: true,
     });
 
-    canvas.renderAll();
+    // Set up default brush
+    canvas.freeDrawingBrush = new PencilBrush(canvas);
+
+    setCanvas(canvas);
+
+    // Selection events
+    const handleSelection = () => {
+      const ids = canvas
+        .getActiveObjects()
+        .map((obj) => (obj as unknown as { data?: { objectId?: string } }).data?.objectId)
+        .filter((id): id is string => !!id);
+      setSelectedObjectIds(ids);
+    };
+
+    canvas.on('selection:created', handleSelection);
+    canvas.on('selection:updated', handleSelection);
+    canvas.on('selection:cleared', () => setSelectedObjectIds([]));
+
+    // Commit to history after user drags/resizes/rotates
+    canvas.on('object:modified', () => commitToHistory());
+
+    // Tag drawn paths with layer data and commit
+    canvas.on('path:created', (opt) => {
+      const state = useCanvasStore.getState();
+      const p = opt.path as unknown as { data?: Record<string, string> };
+      p.data = {
+        objectId: crypto.randomUUID(),
+        layerId: state.activeLayerId,
+      };
+      state.commitToHistory();
+    });
+
+    // Click-to-place for text and shape tools
+    canvas.on('mouse:down', (opt) => {
+      const state = useCanvasStore.getState();
+
+      if (state.activeTool === 'text') {
+        // Only place text if clicking empty space (no target) or explicitly on canvas
+        if (opt.target) return;
+        const pt = opt.scenePoint;
+        state.addObject('textbox', {
+          left: pt.x - 60,
+          top: pt.y - 16,
+          text: 'Texte',
+          fontSize: state.fontSize,
+          fontFamily: state.fontFamily,
+          fill: state.activeColor,
+          width: 200,
+        });
+        // Switch to select so user can edit the text immediately
+        state.setActiveTool('select');
+      }
+
+      if (state.activeTool === 'shape' && state.pendingShapeId) {
+        const shape = getShape(state.pendingShapeId);
+        if (!shape) return;
+        const pt = opt.scenePoint;
+        state.addObject('path', {
+          path: shape.pathData,
+          left: pt.x - 75,
+          top: pt.y - 75,
+          fill: state.activeColor,
+          scaleX: 1.5,
+          scaleY: 1.5,
+          stroke: '#00000015',
+          strokeWidth: 1,
+        });
+        // Stay in shape mode for rapid placement
+      }
+    });
 
     return () => {
       canvas.dispose();
+      setCanvas(null);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Rebuild garments when design changes
+  // ── Sync tool mode with canvas ────────────────────
+
   useEffect(() => {
-    const canvas = fabricRef.current;
-    if (!canvas || !currentDesign) return;
+    const canvas = getCanvas();
+    if (!canvas) return;
 
-    // Remove all garment objects (keep mannequin + decorative = first 5 objects)
-    const baseCount = 5;
-    while (canvas.getObjects().length > baseCount) {
-      const obj = canvas.getObjects()[baseCount];
-      canvas.remove(obj);
-    }
-
-    // Add garment instances
-    currentDesign.garments.forEach((garment) => {
-      const path = new Path(
-        garmentSvgPaths[garment.templateId] || '',
-        {
-          left: garment.position.x,
-          top: garment.position.y,
-          fill: garment.color,
-          stroke: '#00000020',
-          strokeWidth: 1,
-          scaleX: garment.scale.x,
-          scaleY: garment.scale.y,
-          angle: garment.rotation,
-          selectable: true,
-          hasControls: true,
-          data: { garmentId: garment.id },
-          opacity: 0.9,
-        }
-      );
-      canvas.add(path);
-    });
-
-    canvas.renderAll();
-
-    // Handle selection
-    const onSelected = (e: { selected?: unknown[] }) => {
-      if (e.selected && e.selected.length === 1) {
-        const obj = e.selected[0] as { data?: { garmentId?: string } };
-        if (obj?.data?.garmentId) {
-          selectGarment(obj.data.garmentId);
-        }
-      }
-    };
-    const onCleared = () => selectGarment(null);
-    const onModified = (e: { target?: { left?: number; top?: number; scaleX?: number; scaleY?: number; angle?: number; data?: { garmentId?: string } } }) => {
-      const obj = e.target;
-      if (obj?.data?.garmentId) {
-        updateGarment(obj.data.garmentId, {
-          position: { x: obj.left ?? 0, y: obj.top ?? 0 },
-          scale: { x: obj.scaleX ?? 1, y: obj.scaleY ?? 1 },
-          rotation: obj.angle ?? 0,
+    switch (activeTool) {
+      case 'select':
+        canvas.isDrawingMode = false;
+        canvas.selection = true;
+        canvas.defaultCursor = 'default';
+        canvas.getObjects().forEach((obj) => {
+          if ((obj as unknown as { data?: { zoneId?: string } }).data?.zoneId) {
+            obj.hoverCursor = 'pointer';
+          }
         });
-      }
-    };
-
-    canvas.on('selection:created', onSelected);
-    canvas.on('selection:updated', onSelected);
-    canvas.on('selection:cleared', onCleared);
-    canvas.on('object:modified', onModified);
-
-    return () => {
-      canvas.off('selection:created', onSelected as () => void);
-      canvas.off('selection:updated', onSelected as () => void);
-      canvas.off('selection:cleared', onCleared);
-      canvas.off('object:modified', onModified as () => void);
-    };
-  }, [currentDesign, selectGarment, updateGarment]);
-
-  // Apply color to selected garment
-  useEffect(() => {
-    const canvas = fabricRef.current;
-    if (!canvas || !selectedGarmentId || activeTool !== 'color') return;
-
-    const objects = canvas.getObjects();
-    for (const obj of objects) {
-      const data = (obj as { data?: { garmentId?: string } }).data;
-      if (data?.garmentId === selectedGarmentId) {
-        (obj as Path).set('fill', activeColor);
-        canvas.renderAll();
-        updateGarment(selectedGarmentId, { color: activeColor });
         break;
-      }
+      case 'draw':
+        canvas.isDrawingMode = true;
+        canvas.selection = false;
+        if (canvas.freeDrawingBrush) {
+          canvas.freeDrawingBrush.color = activeColor;
+          canvas.freeDrawingBrush.width = brushWidth;
+        }
+        break;
+      case 'text':
+        canvas.isDrawingMode = false;
+        canvas.selection = false;
+        canvas.defaultCursor = 'text';
+        break;
+      case 'shape':
+        canvas.isDrawingMode = false;
+        canvas.selection = false;
+        canvas.defaultCursor = 'crosshair';
+        break;
     }
-  }, [activeColor, selectedGarmentId, activeTool, updateGarment]);
+    canvas.renderAll();
+  }, [activeTool, activeColor, brushWidth, getCanvas]);
+
+  // ── Keep brush color/width in sync while drawing ──
+
+  useEffect(() => {
+    const canvas = getCanvas();
+    if (!canvas || activeTool !== 'draw' || !canvas.freeDrawingBrush) return;
+    canvas.freeDrawingBrush.color = activeColor;
+    canvas.freeDrawingBrush.width = brushWidth;
+  }, [activeColor, brushWidth, activeTool, getCanvas]);
+
+  // ── Responsive scaling ────────────────────────────
+
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    const update = () => {
+      const w = container.clientWidth;
+      setScale(Math.min(w / CANVAS_WIDTH, 1));
+    };
+
+    const observer = new ResizeObserver(update);
+    observer.observe(container);
+    update();
+
+    return () => observer.disconnect();
+  }, []);
+
+  // ── Keyboard shortcuts ────────────────────────────
+
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      const meta = e.metaKey || e.ctrlKey;
+      if (meta && e.key === 'z' && !e.shiftKey) {
+        e.preventDefault();
+        undo();
+      } else if (meta && e.key === 'z' && e.shiftKey) {
+        e.preventDefault();
+        useCanvasStore.getState().redo();
+      } else if (meta && e.key === 'y') {
+        e.preventDefault();
+        useCanvasStore.getState().redo();
+      } else if ((e.key === 'Delete' || e.key === 'Backspace') && !meta) {
+        if ((e.target as HTMLElement).tagName === 'INPUT') return;
+        if ((e.target as HTMLElement).tagName === 'TEXTAREA') return;
+        // Don't delete while editing a textbox on canvas
+        const canvas = getCanvas();
+        if (canvas && (canvas as unknown as { _activeObject?: { isEditing?: boolean } })._activeObject?.isEditing) return;
+        e.preventDefault();
+        removeObject();
+      } else if (e.key === 'Escape') {
+        setActiveTool('select');
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, [undo, removeObject, getCanvas, setActiveTool]);
+
+  // ── Render ────────────────────────────────────────
 
   return (
-    <div className="flex justify-center">
-      <div className="rounded-2xl shadow-lg overflow-hidden border-4 border-pink-200">
-        <canvas ref={canvasRef} />
+    <div ref={containerRef} className="w-full">
+      <div
+        className="mx-auto"
+        style={{ width: CANVAS_WIDTH * scale, height: CANVAS_HEIGHT * scale }}
+      >
+        <div
+          className="rounded-xl shadow-[0_4px_24px_rgba(0,0,0,0.10)] overflow-hidden"
+          style={{
+            width: CANVAS_WIDTH,
+            height: CANVAS_HEIGHT,
+            transform: `scale(${scale})`,
+            transformOrigin: 'top left',
+          }}
+        >
+          <canvas ref={canvasElRef} />
+        </div>
       </div>
     </div>
   );
 }
-
-// Quick lookup for garment SVG paths
-import { garmentTemplates } from '../garments/templates';
-
-const garmentSvgPaths: Record<string, string> = {};
-garmentTemplates.forEach((t) => {
-  garmentSvgPaths[t.id] = t.svgPath;
-});

@@ -1,1 +1,38 @@
 @import "tailwindcss";
+
+/* ─── Touch / tablet optimizations ─────────────────────────────────── */
+
+/* Prevent double-tap zoom on interactive elements */
+button, a, input, select, [role="button"] {
+  touch-action: manipulation;
+}
+
+/* Prevent text selection on UI elements (not on canvas textboxes) */
+.no-select {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+/* On touch devices, always show action buttons (no hover) */
+@media (hover: none) and (pointer: coarse) {
+  .touch-visible {
+    opacity: 1 !important;
+  }
+}
+
+/* Thin scrollbar for panels */
+.scrollbar-thin::-webkit-scrollbar {
+  width: 4px;
+}
+.scrollbar-thin::-webkit-scrollbar-track {
+  background: transparent;
+}
+.scrollbar-thin::-webkit-scrollbar-thumb {
+  background: #e5e7eb;
+  border-radius: 2px;
+}
+
+/* Canvas container: prevent scroll bounce on iPad */
+.canvas-container {
+  overscroll-behavior: contain;
+}

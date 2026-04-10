@@ -1,75 +1,156 @@
+import { Routes, Route } from 'react-router-dom';
 import { useEffect } from 'react';
-import { useDesignStore } from './stores/designStore';
 import DesignCanvas from './features/canvas/DesignCanvas';
-import ColorPicker from './features/tools/ColorPicker';
-import PatternPicker from './features/tools/PatternPicker';
 import GarmentPicker from './features/garments/GarmentPicker';
+import ColorPicker from './features/tools/ColorPicker';
 import Toolbar from './features/tools/Toolbar';
-import Gallery from './features/gallery/Gallery';
+import ShapeLibrary from './features/tools/ShapeLibrary';
+import DrawingTool from './features/tools/DrawingTool';
+import TextTool from './features/tools/TextTool';
+import Home from './features/home/Home';
+import SaveDialog from './features/gallery/SaveDialog';
+import ExportDialog from './features/gallery/ExportDialog';
+import { useCanvasStore } from './stores/canvasStore';
+import { useGalleryStore } from './stores/galleryStore';
+import { useSettingsStore } from './stores/settingsStore';
 
-export default function App() {
-  const { loadSavedDesigns, currentDesign } = useDesignStore();
+// ─── Layer Panel ─────────────────────────────────────────────────────
 
-  useEffect(() => {
-    loadSavedDesigns();
-  }, [loadSavedDesigns]);
+function LayerPanel() {
+  const { layers, activeLayerId, selectLayer, addLayer, removeLayer, toggleLayerVisibility, toggleLayerLock } = useCanvasStore();
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-pink-50 via-purple-50 to-blue-50">
-      {/* Header */}
-      <header className="text-center py-6">
-        <h1 className="text-4xl font-bold bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 bg-clip-text text-transparent">
-          Atelier de Mode
-        </h1>
-        <p className="text-gray-400 text-sm mt-1">
-          Cree tes propres vetements !
-        </p>
-      </header>
-
-      {/* Toolbar */}
-      <div className="max-w-5xl mx-auto px-4 mb-4">
-        <Toolbar />
+    <div className="bg-white rounded-2xl shadow-sm p-3 border border-gray-100">
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Calques</h3>
+        <button onClick={() => addLayer()} className="text-[10px] px-2 py-0.5 bg-gray-100 rounded-lg hover:bg-gray-200 transition-colors">+</button>
       </div>
-
-      {/* Main layout */}
-      <div className="max-w-5xl mx-auto px-4 pb-12">
-        <div className="flex gap-6 flex-col lg:flex-row">
-          {/* Left sidebar — garments */}
-          <div className="w-full lg:w-48 flex-shrink-0 space-y-4">
-            <GarmentPicker />
-          </div>
-
-          {/* Center — canvas */}
-          <div className="flex-1 min-w-0">
-            {currentDesign ? (
-              <DesignCanvas />
-            ) : (
-              <div className="flex items-center justify-center h-[700px] bg-white/50 rounded-2xl border-4 border-dashed border-pink-200">
-                <div className="text-center">
-                  <p className="text-6xl mb-4">{'\u{1F3A8}'}</p>
-                  <p className="text-gray-500 text-lg">
-                    Clique sur <strong>Nouveau</strong> pour commencer !
-                  </p>
-                </div>
-              </div>
+      <div className="space-y-0.5">
+        {[...layers].reverse().map((layer) => (
+          <div
+            key={layer.id}
+            onClick={() => selectLayer(layer.id)}
+            className={`flex items-center gap-1 px-2 py-1.5 rounded-lg text-[11px] cursor-pointer transition-colors ${
+              layer.id === activeLayerId ? 'bg-purple-50 border border-purple-200' : 'hover:bg-gray-50 border border-transparent'
+            }`}
+          >
+            <button onClick={(e) => { e.stopPropagation(); toggleLayerVisibility(layer.id); }}
+              className={`w-4 h-4 flex items-center justify-center ${layer.visible ? 'text-gray-500' : 'text-gray-300'}`}>
+              {layer.visible ? '\u25C9' : '\u25CB'}
+            </button>
+            <button onClick={(e) => { e.stopPropagation(); toggleLayerLock(layer.id); }}
+              className={`w-4 h-4 flex items-center justify-center text-[9px] ${layer.locked ? 'text-red-400' : 'text-gray-300'}`}>
+              {layer.locked ? '\u{1F512}' : '\u{1F513}'}
+            </button>
+            <span className="flex-1 truncate">{layer.type === 'garment' ? `\u{1F455} ${layer.name}` : layer.name}</span>
+            {layers.length > 1 && layer.type !== 'garment' && (
+              <button onClick={(e) => { e.stopPropagation(); removeLayer(layer.id); }}
+                className="w-4 h-4 flex items-center justify-center text-gray-300 hover:text-red-400">&times;</button>
             )}
           </div>
-
-          {/* Right sidebar — colors, patterns, gallery */}
-          <div className="w-full lg:w-52 flex-shrink-0 space-y-4">
-            <ColorPicker />
-            <PatternPicker />
-
-            {/* Gallery */}
-            <div className="bg-white rounded-2xl p-4 shadow-md">
-              <h3 className="text-sm font-bold text-gray-600 mb-3 uppercase tracking-wide">
-                Mes creations
-              </h3>
-              <Gallery />
-            </div>
-          </div>
-        </div>
+        ))}
       </div>
     </div>
+  );
+}
+
+// ─── Right Panel (context-sensitive) ─────────────────────────────────
+
+function RightPanel() {
+  const { activeTool } = useCanvasStore();
+  const isKid = useSettingsStore((s) => s.mode === 'kid');
+
+  return (
+    <div className="flex flex-col gap-2.5 overflow-y-auto max-h-[calc(100vh-80px)] pr-1 scrollbar-thin">
+      {/* Context tool panel */}
+      {activeTool === 'draw' && <DrawingTool />}
+      {activeTool === 'text' && <TextTool />}
+      {activeTool === 'shape' && <ShapeLibrary />}
+      {activeTool === 'select' && <GarmentPicker />}
+
+      {/* Always: colors */}
+      <ColorPicker />
+
+      {/* Advanced: layers */}
+      {!isKid && <LayerPanel />}
+    </div>
+  );
+}
+
+// ─── Editor ──────────────────────────────────────────────────────────
+
+function Editor() {
+  const { currentDesignName } = useGalleryStore();
+  const { mode, toggleMode } = useSettingsStore();
+
+  // Ctrl+S shortcut
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+        e.preventDefault();
+        const g = useGalleryStore.getState();
+        if (g.currentDesignId) g.saveOverCurrent(); else g.openSaveDialog();
+      }
+    };
+    window.addEventListener('keydown', handler);
+    return () => window.removeEventListener('keydown', handler);
+  }, []);
+
+  return (
+    <div className="h-screen flex flex-col bg-gray-50 overflow-hidden">
+      {/* Header bar */}
+      <header className="flex items-center justify-between px-4 py-2 bg-white/80 backdrop-blur border-b border-gray-100 flex-shrink-0">
+        <h1 className="text-lg font-bold bg-gradient-to-r from-pink-500 via-purple-500 to-blue-500 bg-clip-text text-transparent">
+          Atelier de Mode
+        </h1>
+        <span className="text-xs text-gray-400 hidden sm:block">{currentDesignName}</span>
+        <button
+          onClick={toggleMode}
+          className="text-[10px] px-3 py-1 rounded-full border border-gray-200 text-gray-500 hover:border-purple-300 hover:text-purple-600 transition-colors"
+        >
+          {mode === 'kid' ? 'Mode enfant' : 'Mode avance'}
+        </button>
+      </header>
+
+      {/* Main area */}
+      <div className="flex flex-1 min-h-0">
+        {/* Left: toolbar */}
+        <div className="flex-shrink-0 p-2 hidden md:flex">
+          <Toolbar />
+        </div>
+
+        {/* Center: canvas */}
+        <div className="flex-1 min-w-0 p-2 flex items-start justify-center overflow-auto">
+          <DesignCanvas />
+        </div>
+
+        {/* Right: context panel */}
+        <div className="w-52 flex-shrink-0 p-2 hidden md:block">
+          <RightPanel />
+        </div>
+      </div>
+
+      {/* Mobile bottom bar */}
+      <div className="md:hidden flex-shrink-0 border-t border-gray-100 bg-white px-2 py-1.5 overflow-x-auto">
+        <div className="flex justify-center [&>div]:flex-row [&>div]:gap-1.5">
+          <Toolbar />
+        </div>
+      </div>
+
+      {/* Dialogs */}
+      <SaveDialog />
+      <ExportDialog />
+    </div>
+  );
+}
+
+// ─── App Router ──────────────────────────────────────────────────────
+
+export default function App() {
+  return (
+    <Routes>
+      <Route path="/" element={<Home />} />
+      <Route path="/editor" element={<Editor />} />
+    </Routes>
   );
 }
