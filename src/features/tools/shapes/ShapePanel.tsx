@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { geoShapes, SHAPE_CATEGORIES, type GeoShape } from './shapeGeometry';
 import { shapes as decorativeShapes } from '../shapeData';
 import StickerLibrary from './StickerLibrary';
-import { useCanvasStore } from '../../../stores/canvasStore';
+import { useCanvasStore, CANVAS_WIDTH, CANVAS_HEIGHT } from '../../../stores/canvasStore';
 
 type Tab = 'geo' | 'deco' | 'stickers';
 
@@ -41,17 +41,20 @@ function TabBtn({ active, onClick, children }: { active: boolean; onClick: () =>
 // ─── Geometric shapes grid ───────────────────────────────────────────
 
 function GeoShapeGrid() {
-  const { setPendingShape, pendingShapeId, activeColor } = useCanvasStore();
+  const { addObject, setActiveTool, activeColor } = useCanvasStore();
   const [activeCategory, setActiveCategory] = useState('basic');
 
   const filtered = geoShapes.filter((s) => s.category === activeCategory);
 
-  // We reuse the shape tool mode — clicking a geo shape sets it as pending
-  // and the canvas places it on click
   const handleSelect = (shape: GeoShape) => {
-    // Store as "geo:circle" etc. to distinguish from decorative shapes
-    const fullId = `geo:${shape.id}`;
-    setPendingShape(pendingShapeId === fullId ? null : fullId);
+    addObject('path', {
+      path: shape.pathData,
+      left: CANVAS_WIDTH / 2 - 75,
+      top: CANVAS_HEIGHT / 2 - 75,
+      fill: activeColor, scaleX: 1.5, scaleY: 1.5,
+      stroke: '#00000020', strokeWidth: 1,
+    });
+    setActiveTool('select');
   };
 
   return (
@@ -72,25 +75,19 @@ function GeoShapeGrid() {
       </div>
 
       <div className="p-2 grid grid-cols-4 gap-1 max-h-[180px] overflow-y-auto scrollbar-thin">
-        {filtered.map((shape) => {
-          const fullId = `geo:${shape.id}`;
-          const isActive = pendingShapeId === fullId;
-          return (
+        {filtered.map((shape) => (
             <button
               key={shape.id}
               onClick={() => handleSelect(shape)}
-              className={`flex flex-col items-center gap-0.5 p-1 rounded-lg border transition-all ${
-                isActive ? 'border-purple-300 bg-purple-50' : 'border-transparent hover:border-gray-200 hover:bg-gray-50'
-              }`}
+              className="flex flex-col items-center gap-0.5 p-1 rounded-lg border border-transparent hover:border-purple-200 hover:bg-purple-50/30 transition-all active:scale-90"
               title={shape.name}
             >
               <svg viewBox="0 0 100 100" className="w-7 h-7">
-                <path d={shape.pathData} fill={isActive ? activeColor : '#D1D5DB'} stroke="#9CA3AF" strokeWidth="2" />
+                <path d={shape.pathData} fill="#D1D5DB" stroke="#9CA3AF" strokeWidth="2" />
               </svg>
               <span className="text-[8px] text-gray-400 truncate w-full text-center">{shape.name}</span>
             </button>
-          );
-        })}
+        ))}
       </div>
     </div>
   );
@@ -99,29 +96,35 @@ function GeoShapeGrid() {
 // ─── Decorative shapes grid (from shapeData.ts) ──────────────────────
 
 function DecoShapeGrid() {
-  const { setPendingShape, pendingShapeId, activeColor } = useCanvasStore();
+  const { addObject, setActiveTool, activeColor } = useCanvasStore();
+
+  const handleAdd = (pathData: string) => {
+    addObject('path', {
+      path: pathData,
+      left: CANVAS_WIDTH / 2 - 75,
+      top: CANVAS_HEIGHT / 2 - 75,
+      fill: activeColor, scaleX: 1.5, scaleY: 1.5,
+      stroke: '#00000015', strokeWidth: 1,
+    });
+    setActiveTool('select');
+  };
 
   return (
     <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-2">
       <div className="grid grid-cols-4 gap-1.5">
-        {decorativeShapes.map((shape) => {
-          const isActive = pendingShapeId === shape.id;
-          return (
+        {decorativeShapes.map((shape) => (
             <button
               key={shape.id}
-              onClick={() => setPendingShape(isActive ? null : shape.id)}
-              className={`flex flex-col items-center gap-0.5 p-1 rounded-lg border transition-all ${
-                isActive ? 'border-purple-300 bg-purple-50' : 'border-transparent hover:border-gray-200 hover:bg-gray-50'
-              }`}
+              onClick={() => handleAdd(shape.pathData)}
+              className="flex flex-col items-center gap-0.5 p-1 rounded-lg border border-transparent hover:border-purple-200 hover:bg-purple-50/30 transition-all active:scale-90"
               title={shape.name}
             >
               <svg viewBox="0 0 100 100" className="w-7 h-7">
-                <path d={shape.pathData} fill={isActive ? activeColor : shape.defaultColor} stroke="#00000015" strokeWidth="2" />
+                <path d={shape.pathData} fill={shape.defaultColor} stroke="#00000015" strokeWidth="2" />
               </svg>
               <span className="text-[8px] text-gray-400 truncate w-full text-center">{shape.name}</span>
             </button>
-          );
-        })}
+        ))}
       </div>
     </div>
   );

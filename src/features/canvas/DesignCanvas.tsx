@@ -83,12 +83,16 @@ export default function DesignCanvas() {
         }
 
         if (!pathData) return;
-        const pt = opt.scenePoint;
         state.addObject('path', {
-          path: pathData, left: pt.x - 75, top: pt.y - 75,
+          path: pathData,
+          left: CANVAS_WIDTH / 2 - 75,
+          top: CANVAS_HEIGHT / 2 - 75,
           fill: state.activeColor, scaleX: 1.5, scaleY: 1.5,
           stroke: '#00000020', strokeWidth: 1,
         });
+        // Place once then switch to select so user can move/resize
+        state.setPendingShape(null);
+        state.setActiveTool('select');
       }
     });
 
