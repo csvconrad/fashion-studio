@@ -1,6 +1,6 @@
 import { create } from 'zustand';
-import { Path } from 'fabric';
-import { useCanvasStore, type CanvasLayer } from './canvasStore';
+import { Path, FabricImage } from 'fabric';
+import { useCanvasStore, type CanvasLayer, CANVAS_WIDTH, CANVAS_HEIGHT } from './canvasStore';
 import { getTemplate } from '../features/garments/templates';
 import type { GarmentView } from '../types/garment';
 
@@ -8,8 +8,10 @@ interface GarmentStore {
   activeGarmentId: string | null;
   garmentLayerId: string | null;
   activeView: GarmentView;
+  customImageUrl: string | null;  // data URL of imported template image
 
   loadGarment: (templateId: string) => void;
+  loadFromImage: (dataUrl: string, name?: string) => Promise<void>;
   switchView: (view: GarmentView) => void;
   removeGarment: () => void;
   applyColorToSelectedZone: (color: string) => void;
@@ -19,6 +21,52 @@ export const useGarmentStore = create<GarmentStore>((set, get) => ({
   activeGarmentId: null,
   garmentLayerId: null,
   activeView: 'front',
+  customImageUrl: null,
+
+  loadFromImage: async (dataUrl, name = 'Gabarit custom') => {
+    const canvas = useCanvasStore.getState().getCanvas();
+    if (!canvas) return;
+
+    // Remove existing garment
+    const { garmentLayerId } = get();
+    if (garmentLayerId) _removeGarmentFromCanvas(garmentLayerId);
+
+    const layerId = crypto.randomUUID();
+    const garmentLayer: CanvasLayer = {
+      id: layerId,
+      name,
+      visible: true,
+      locked: true,
+      opacity: 1,
+      type: 'garment',
+    };
+
+    const { layers } = useCanvasStore.getState();
+    useCanvasStore.setState({ layers: [garmentLayer, ...layers] });
+
+    // Load image and center on canvas
+    const img = await FabricImage.fromURL(dataUrl);
+    const imgW = img.width ?? 400;
+    const imgH = img.height ?? 600;
+    const scale = Math.min((CANVAS_WIDTH * 0.75) / imgW, (CANVAS_HEIGHT * 0.75) / imgH, 1);
+
+    img.set({
+      left: (CANVAS_WIDTH - imgW * scale) / 2,
+      top: (CANVAS_HEIGHT - imgH * scale) / 2,
+      scaleX: scale,
+      scaleY: scale,
+      selectable: false,
+      evented: false,
+      data: { objectId: crypto.randomUUID(), layerId, garmentId: 'custom' },
+    });
+
+    canvas.add(img);
+    canvas.moveObjectTo(img, 0);
+    canvas.renderAll();
+
+    set({ activeGarmentId: 'custom', garmentLayerId: layerId, customImageUrl: dataUrl });
+    useCanvasStore.getState().commitToHistory();
+  },
 
   loadGarment: (templateId) => {
     const template = getTemplate(templateId);
