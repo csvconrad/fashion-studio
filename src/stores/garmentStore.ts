@@ -2,14 +2,15 @@ import { create } from 'zustand';
 import { Path } from 'fabric';
 import { useCanvasStore, type CanvasLayer } from './canvasStore';
 import { getTemplate } from '../features/garments/templates';
-
-// ─── Store ───────────────────────────────────────────────────────────
+import type { GarmentView } from '../types/garment';
 
 interface GarmentStore {
   activeGarmentId: string | null;
   garmentLayerId: string | null;
+  activeView: GarmentView;
 
   loadGarment: (templateId: string) => void;
+  switchView: (view: GarmentView) => void;
   removeGarment: () => void;
   applyColorToSelectedZone: (color: string) => void;
 }
@@ -17,6 +18,7 @@ interface GarmentStore {
 export const useGarmentStore = create<GarmentStore>((set, get) => ({
   activeGarmentId: null,
   garmentLayerId: null,
+  activeView: 'front',
 
   loadGarment: (templateId) => {
     const template = getTemplate(templateId);
@@ -27,15 +29,16 @@ export const useGarmentStore = create<GarmentStore>((set, get) => ({
 
     // Remove existing garment first
     const { garmentLayerId } = get();
-    if (garmentLayerId) {
-      _removeGarmentFromCanvas(garmentLayerId);
-    }
+    if (garmentLayerId) _removeGarmentFromCanvas(garmentLayerId);
 
-    // Create a locked garment layer at the bottom of the stack
+    const view = get().activeView;
+    const zones = template.views[view];
+
+    // Create garment layer
     const layerId = crypto.randomUUID();
     const garmentLayer: CanvasLayer = {
       id: layerId,
-      name: template.name,
+      name: `${template.name} (${view === 'front' ? 'devant' : view === 'back' ? 'dos' : 'cote'})`,
       visible: true,
       locked: true,
       opacity: 1,
@@ -45,53 +48,23 @@ export const useGarmentStore = create<GarmentStore>((set, get) => ({
     const { layers } = useCanvasStore.getState();
     useCanvasStore.setState({ layers: [garmentLayer, ...layers] });
 
-    // Add each zone as a Fabric Path
-    template.zones.forEach((zone) => {
-      const path = new Path(zone.pathData, {
-        fill: zone.defaultColor,
-        stroke: '#00000018',
-        strokeWidth: 1.5,
-        // Selectable for clicking, but locked transforms
-        selectable: true,
-        hasControls: false,
-        hasBorders: true,
-        lockMovementX: true,
-        lockMovementY: true,
-        lockRotation: true,
-        lockScalingX: true,
-        lockScalingY: true,
-        hoverCursor: 'pointer',
-        // Custom data for identification
-        data: {
-          objectId: crypto.randomUUID(),
-          layerId,
-          zoneId: zone.id,
-          zoneName: zone.name,
-          garmentId: templateId,
-        },
-      });
-      canvas.add(path);
-    });
-
-    // Move garment objects to the back (bottom of canvas stack)
-    const garmentObjects = canvas
-      .getObjects()
-      .filter((obj) => _getData(obj).layerId === layerId);
-    garmentObjects.forEach((obj, i) => {
-      canvas.moveObjectTo(obj, i);
-    });
-
-    canvas.discardActiveObject();
-    canvas.renderAll();
+    _addZonesToCanvas(zones, layerId, templateId, canvas);
 
     set({ activeGarmentId: templateId, garmentLayerId: layerId });
     useCanvasStore.getState().commitToHistory();
   },
 
+  switchView: (view) => {
+    const { activeGarmentId } = get();
+    if (!activeGarmentId) return;
+    set({ activeView: view });
+    // Reload with new view
+    get().loadGarment(activeGarmentId);
+  },
+
   removeGarment: () => {
     const { garmentLayerId } = get();
     if (!garmentLayerId) return;
-
     _removeGarmentFromCanvas(garmentLayerId);
     set({ activeGarmentId: null, garmentLayerId: null });
     useCanvasStore.getState().commitToHistory();
@@ -100,17 +73,13 @@ export const useGarmentStore = create<GarmentStore>((set, get) => ({
   applyColorToSelectedZone: (color) => {
     const canvas = useCanvasStore.getState().getCanvas();
     if (!canvas) return;
-
     const active = canvas.getActiveObjects();
     if (active.length === 0) return;
-
     let changed = false;
     for (const obj of active) {
-      // Apply to any selected object (garment zone or regular)
       obj.set('fill', color);
       changed = true;
     }
-
     if (changed) {
       canvas.renderAll();
       useCanvasStore.getState().commitToHistory();
@@ -124,34 +93,62 @@ function _getData(obj: unknown): Record<string, string> {
   return ((obj as { data?: Record<string, string> }).data ?? {});
 }
 
+function _addZonesToCanvas(
+  zones: { id: string; name: string; pathData: string; defaultColor: string }[],
+  layerId: string,
+  templateId: string,
+  canvas: { add: Function; moveObjectTo: Function; getObjects: Function; discardActiveObject: Function; renderAll: Function },
+) {
+  zones.forEach((zone) => {
+    const path = new Path(zone.pathData, {
+      fill: zone.defaultColor,
+      stroke: '#00000012',
+      strokeWidth: 1.5,
+      selectable: true,
+      hasControls: false,
+      hasBorders: true,
+      lockMovementX: true,
+      lockMovementY: true,
+      lockRotation: true,
+      lockScalingX: true,
+      lockScalingY: true,
+      hoverCursor: 'pointer',
+      data: {
+        objectId: crypto.randomUUID(),
+        layerId,
+        zoneId: zone.id,
+        zoneName: zone.name,
+        garmentId: templateId,
+      },
+    });
+    canvas.add(path);
+  });
+
+  const garmentObjects = canvas.getObjects()
+    .filter((obj: unknown) => _getData(obj).layerId === layerId);
+  garmentObjects.forEach((obj: unknown, i: number) => {
+    canvas.moveObjectTo(obj, i);
+  });
+
+  canvas.discardActiveObject();
+  canvas.renderAll();
+}
+
 function _removeGarmentFromCanvas(layerId: string) {
   const canvas = useCanvasStore.getState().getCanvas();
   if (!canvas) return;
-
-  // Remove fabric objects
-  const toRemove = canvas
-    .getObjects()
-    .filter((obj) => _getData(obj).layerId === layerId);
+  const toRemove = canvas.getObjects().filter((obj) => _getData(obj).layerId === layerId);
   toRemove.forEach((obj) => canvas.remove(obj));
   canvas.discardActiveObject();
   canvas.renderAll();
-
-  // Remove layer from store
   const { layers } = useCanvasStore.getState();
-  useCanvasStore.setState({
-    layers: layers.filter((l) => l.id !== layerId),
-  });
+  useCanvasStore.setState({ layers: layers.filter((l) => l.id !== layerId) });
 }
 
-// ─── Sync with undo/redo ─────────────────────────────────────────────
-// When undo/redo removes the garment layer, clear garment state.
-
+// Sync with undo/redo
 useCanvasStore.subscribe((state) => {
   const { garmentLayerId } = useGarmentStore.getState();
   if (!garmentLayerId) return;
-
-  const garmentLayerExists = state.layers.some((l) => l.id === garmentLayerId);
-  if (!garmentLayerExists) {
-    useGarmentStore.setState({ activeGarmentId: null, garmentLayerId: null });
-  }
+  const exists = state.layers.some((l) => l.id === garmentLayerId);
+  if (!exists) useGarmentStore.setState({ activeGarmentId: null, garmentLayerId: null });
 });
