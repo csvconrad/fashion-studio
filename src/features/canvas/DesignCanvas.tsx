@@ -174,6 +174,7 @@ export default function DesignCanvas() {
         break;
       case 'image':
       case 'garment':
+      case 'library':
         canvas.selection = true;
         canvas.defaultCursor = 'default';
         break;

@@ -72,7 +72,7 @@ function _pushSnapshot(state: { layers: CanvasLayer[]; activeLayerId: string }):
 
 // ─── Store interface ─────────────────────────────────────────────────
 
-export type ToolMode = 'select' | 'draw' | 'text' | 'shape' | 'image' | 'garment';
+export type ToolMode = 'select' | 'draw' | 'text' | 'shape' | 'image' | 'garment' | 'library';
 
 interface CanvasStore {
   // Reactive state

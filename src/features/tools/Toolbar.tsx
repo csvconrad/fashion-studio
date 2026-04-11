@@ -8,11 +8,12 @@ import { useSettingsStore } from '../../stores/settingsStore';
 interface ToolDef { id: ToolMode; label: string; shortcut?: string }
 
 const tools: ToolDef[] = [
-  { id: 'select',  label: 'Selection', shortcut: 'V' },
-  { id: 'garment', label: 'Vetements' },
-  { id: 'draw',    label: 'Pinceau', shortcut: 'B' },
-  { id: 'text',    label: 'Texte', shortcut: 'T' },
-  { id: 'shape',   label: 'Formes', shortcut: 'S' },
+  { id: 'select',  label: 'Select', shortcut: 'V' },
+  { id: 'library', label: 'Library', shortcut: 'L' },
+  { id: 'garment', label: 'Templates', shortcut: 'G' },
+  { id: 'draw',    label: 'Brush', shortcut: 'B' },
+  { id: 'text',    label: 'Text', shortcut: 'T' },
+  { id: 'shape',   label: 'Shapes', shortcut: 'S' },
   { id: 'image',   label: 'Image', shortcut: 'I' },
 ];
 
@@ -23,6 +24,12 @@ function ToolIcon({ id, className }: { id: ToolMode; className: string }) {
     case 'select': return (
       <svg viewBox="0 0 24 24" {...s}>
         <path d="M5 3l-1 18 5.5-5.5 4 7 2.5-1.5-4-7H19z" fill="currentColor" stroke="none" />
+      </svg>
+    );
+    case 'library': return (
+      <svg viewBox="0 0 24 24" {...s}>
+        <path d="M4 19V5a2 2 0 012-2h8l6 6v10a2 2 0 01-2 2H6a2 2 0 01-2-2z" />
+        <path d="M14 3v6h6M8 13h8M8 17h5" />
       </svg>
     );
     case 'garment': return (
@@ -102,12 +109,12 @@ export default function Toolbar() {
       <div className="w-6 h-px bg-white/10 my-1" />
 
       {/* ── History ── */}
-      <button onClick={undo} disabled={!canUndo} className={actionBtn(!canUndo)} title="Annuler (Ctrl+Z)">
+      <button onClick={undo} disabled={!canUndo} className={actionBtn(!canUndo)} title="Undo (Ctrl+Z)">
         <svg viewBox="0 0 24 24" className={actionIconSz} fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M4 10h10a5 5 0 0 1 0 10h-2" /><path d="M4 10l4-4M4 10l4 4" />
         </svg>
       </button>
-      <button onClick={redo} disabled={!canRedo} className={actionBtn(!canRedo)} title="Refaire (Ctrl+Shift+Z)">
+      <button onClick={redo} disabled={!canRedo} className={actionBtn(!canRedo)} title="Redo (Ctrl+Shift+Z)">
         <svg viewBox="0 0 24 24" className={actionIconSz} fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M20 10H10a5 5 0 0 0 0 10h2" /><path d="M20 10l-4-4M20 10l-4 4" />
         </svg>
@@ -115,7 +122,7 @@ export default function Toolbar() {
 
       {/* ── Delete (advanced) ── */}
       {!isKid && (
-        <button onClick={() => removeObject()} disabled={!selectedObjectIds.length} className={actionBtn(!selectedObjectIds.length)} title="Supprimer (Delete)">
+        <button onClick={() => removeObject()} disabled={!selectedObjectIds.length} className={actionBtn(!selectedObjectIds.length)} title="Delete">
           <svg viewBox="0 0 24 24" className={actionIconSz} fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M4 6h16M10 6V4h4v2M6 6v13a1 1 0 001 1h10a1 1 0 001-1V6" />
           </svg>
@@ -125,20 +132,20 @@ export default function Toolbar() {
       <div className="w-6 h-px bg-white/10 my-1" />
 
       {/* ── File actions ── */}
-      <button onClick={() => currentDesignId ? saveOverCurrent() : openSaveDialog()} className={actionBtn()} title="Sauvegarder (Ctrl+S)">
+      <button onClick={() => currentDesignId ? saveOverCurrent() : openSaveDialog()} className={actionBtn()} title="Save (Ctrl+S)">
         <svg viewBox="0 0 24 24" className={actionIconSz} fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h10l6 6v10a2 2 0 01-2 2z" />
           <path d="M17 21v-7H7v7M7 3v5h8" />
         </svg>
       </button>
       {!isKid && (
-        <button onClick={openExportDialog} className={actionBtn()} title="Telecharger (PNG)">
+        <button onClick={openExportDialog} className={actionBtn()} title="Download PNG">
           <svg viewBox="0 0 24 24" className={actionIconSz} fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
             <path d="M12 3v12m0 0l-4-4m4 4l4-4M5 17v2a2 2 0 002 2h10a2 2 0 002-2v-2" />
           </svg>
         </button>
       )}
-      <button onClick={() => navigate('/')} className={actionBtn()} title="Accueil">
+      <button onClick={() => navigate('/')} className={actionBtn()} title="Home">
         <svg viewBox="0 0 24 24" className={actionIconSz} fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
           <path d="M3 12l9-8 9 8M5 10v10h4v-6h6v6h4V10" />
         </svg>

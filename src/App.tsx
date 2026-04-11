@@ -23,6 +23,7 @@ import ImagePanel from './features/tools/import/ImagePanel';
 import BackgroundRemover from './features/tools/import/BackgroundRemover';
 import LayersPanel from './features/layers/LayersPanel';
 import Onboarding from './features/onboarding/Onboarding';
+import GarmentLibrary from './features/library/GarmentLibrary';
 
 // ─── Command Palette (Ctrl+K) ────────────────────────────────────────
 
@@ -37,16 +38,16 @@ function CommandPalette({ open, onClose }: { open: boolean; onClose: () => void 
     { name: 'Formes', shortcut: 'S', action: () => setActiveTool('shape') },
     { name: 'Image', shortcut: 'I', action: () => setActiveTool('image') },
     { name: 'Gomme', shortcut: 'E', action: () => { setActiveBrush('eraser'); setActiveTool('draw'); } },
-    { name: 'Annuler', shortcut: '\u2318Z', action: () => useCanvasStore.getState().undo() },
-    { name: 'Refaire', shortcut: '\u2318\u21E7Z', action: () => useCanvasStore.getState().redo() },
-    { name: 'Copier', shortcut: '\u2318C', action: () => useCanvasStore.getState().copySelection() },
-    { name: 'Coller', shortcut: '\u2318V', action: () => useCanvasStore.getState().pasteClipboard() },
-    { name: 'Dupliquer', shortcut: '\u2318D', action: () => useCanvasStore.getState().duplicateSelection() },
-    { name: 'Sauvegarder', shortcut: '\u2318S', action: () => { const g = useGalleryStore.getState(); g.currentDesignId ? g.saveOverCurrent() : g.openSaveDialog(); } },
-    { name: 'Crayon', action: () => { setActiveBrush('pencil'); setActiveTool('draw'); } },
-    { name: 'Marqueur', action: () => { setActiveBrush('marker'); setActiveTool('draw'); } },
-    { name: 'Aquarelle', action: () => { setActiveBrush('watercolor'); setActiveTool('draw'); } },
-    { name: 'Calligraphie', action: () => { setActiveBrush('calligraphy'); setActiveTool('draw'); } },
+    { name: 'Undo', shortcut: '\u2318Z', action: () => useCanvasStore.getState().undo() },
+    { name: 'Redo', shortcut: '\u2318\u21E7Z', action: () => useCanvasStore.getState().redo() },
+    { name: 'Copy', shortcut: '\u2318C', action: () => useCanvasStore.getState().copySelection() },
+    { name: 'Paste', shortcut: '\u2318V', action: () => useCanvasStore.getState().pasteClipboard() },
+    { name: 'Duplicate', shortcut: '\u2318D', action: () => useCanvasStore.getState().duplicateSelection() },
+    { name: 'Save', shortcut: '\u2318S', action: () => { const g = useGalleryStore.getState(); g.currentDesignId ? g.saveOverCurrent() : g.openSaveDialog(); } },
+    { name: 'Pencil', action: () => { setActiveBrush('pencil'); setActiveTool('draw'); } },
+    { name: 'Marker', action: () => { setActiveBrush('marker'); setActiveTool('draw'); } },
+    { name: 'Watercolor', action: () => { setActiveBrush('watercolor'); setActiveTool('draw'); } },
+    { name: 'Calligraphy', action: () => { setActiveBrush('calligraphy'); setActiveTool('draw'); } },
     { name: 'Neon', action: () => { setActiveBrush('neon'); setActiveTool('draw'); } },
     { name: 'Spray', action: () => { setActiveBrush('spray'); setActiveTool('draw'); } },
   ];
@@ -71,7 +72,7 @@ function CommandPalette({ open, onClose }: { open: boolean; onClose: () => void 
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Rechercher un outil, pinceau, action..."
+            placeholder="Search tools, brushes, actions..."
             className="w-full bg-white/5 text-white text-sm px-3 py-2 rounded-lg border border-white/10 focus:border-purple-500 focus:outline-none placeholder-white/30"
             autoFocus
           />
@@ -150,6 +151,19 @@ function Editor() {
   const { mode, toggleMode } = useSettingsStore();
   const profile = useAuthStore((s) => s.profile);
   const [cmdOpen, setCmdOpen] = useState(false);
+  const [libraryOpen, setLibraryOpen] = useState(false);
+
+  // Open library when library tool is selected
+  useEffect(() => {
+    const unsub = useCanvasStore.subscribe((state, prev) => {
+      if (state.activeTool === 'library' && prev.activeTool !== 'library') {
+        setLibraryOpen(true);
+        // Switch back to select so the tool doesn't stay "stuck"
+        useCanvasStore.getState().setActiveTool('select');
+      }
+    });
+    return unsub;
+  }, []);
 
   // ── Autosave every 30s ──
   useEffect(() => {
@@ -190,6 +204,7 @@ function Editor() {
         case 's': case 'S': s.setActiveTool('shape'); break;
         case 'i': case 'I': s.setActiveTool('image'); break;
         case 'g': case 'G': s.setActiveTool('garment'); break;
+        case 'l': case 'L': s.setActiveTool('library'); break;
         case '[': s.setBrushWidth(Math.max(1, s.brushWidth - 2)); break;
         case ']': s.setBrushWidth(Math.min(80, s.brushWidth + 2)); break;
         case 'Delete': case 'Backspace': e.preventDefault(); s.removeObject(); break;
@@ -215,12 +230,12 @@ function Editor() {
           <button onClick={() => setCmdOpen(true)}
             className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-white/5 text-[10px] text-white/30 hover:bg-white/10 hover:text-white/50 transition-colors border border-white/5">
             <svg viewBox="0 0 16 16" className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="1.5"><circle cx="7" cy="7" r="4" /><path d="M14 14l-3-3" /></svg>
-            Rechercher...
+            Search...
             <span className="text-[9px] bg-white/5 px-1 rounded">\u2318K</span>
           </button>
           <button onClick={toggleMode}
             className="text-[10px] px-2 py-0.5 rounded-md bg-white/5 text-white/30 hover:bg-white/10 hover:text-white/50 transition-colors border border-white/5">
-            {mode === 'kid' ? 'Enfant' : 'Pro'}
+            {mode === 'kid' ? 'Kid' : 'Pro'}
           </button>
         </div>
       </header>
@@ -255,6 +270,7 @@ function Editor() {
       <SaveDialog />
       <ExportDialog />
       <CommandPalette open={cmdOpen} onClose={() => setCmdOpen(false)} />
+      {libraryOpen && <GarmentLibrary onClose={() => setLibraryOpen(false)} />}
       <Onboarding />
     </div>
   );
@@ -267,7 +283,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
   useEffect(() => { initAuth(); }, [initAuth]);
 
   if (!isSupabaseConfigured) return <>{children}</>;
-  if (loading) return <div className="min-h-screen flex items-center justify-center bg-[#0f0f1a]"><div className="text-white/30 text-sm">Chargement...</div></div>;
+  if (loading) return <div className="min-h-screen flex items-center justify-center bg-[#0f0f1a]"><div className="text-white/30 text-sm">Loading...</div></div>;
   if (!user) return <LoginScreen />;
   if (!profile) return <ProfilePicker />;
   return <>{children}</>;
