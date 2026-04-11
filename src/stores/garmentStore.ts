@@ -114,7 +114,7 @@ export const useGarmentStore = create<GarmentStore>((set, get) => ({
     const { garmentLayerId } = get();
     if (!garmentLayerId) return;
     _removeGarmentFromCanvas(garmentLayerId);
-    set({ activeGarmentId: null, garmentLayerId: null });
+    set({ activeGarmentId: null, garmentLayerId: null, customImageUrl: null });
     useCanvasStore.getState().commitToHistory();
   },
 
@@ -185,10 +185,26 @@ function _addZonesToCanvas(
 function _removeGarmentFromCanvas(layerId: string) {
   const canvas = useCanvasStore.getState().getCanvas();
   if (!canvas) return;
-  const toRemove = canvas.getObjects().filter((obj) => _getData(obj).layerId === layerId);
-  toRemove.forEach((obj) => canvas.remove(obj));
+
+  // Find all objects belonging to this garment layer
+  const allObjects = canvas.getObjects();
+  const toRemove = allObjects.filter((obj) => {
+    const d = _getData(obj);
+    return d.layerId === layerId || d.garmentId;
+  });
+
+  // If no objects found by data, try removing all non-selectable objects
+  // (custom image templates are set with selectable: false, evented: false)
+  if (toRemove.length === 0) {
+    const locked = allObjects.filter((obj) => !obj.selectable && !obj.evented);
+    locked.forEach((obj) => canvas.remove(obj));
+  } else {
+    toRemove.forEach((obj) => canvas.remove(obj));
+  }
+
   canvas.discardActiveObject();
   canvas.renderAll();
+
   const { layers } = useCanvasStore.getState();
   useCanvasStore.setState({ layers: layers.filter((l) => l.id !== layerId) });
 }
