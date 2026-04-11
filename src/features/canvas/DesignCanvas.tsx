@@ -173,6 +173,7 @@ export default function DesignCanvas() {
         canvas.defaultCursor = 'crosshair';
         break;
       case 'image':
+      case 'garment':
         canvas.selection = true;
         canvas.defaultCursor = 'default';
         break;

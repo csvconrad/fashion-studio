@@ -106,7 +106,7 @@ function RightPanel() {
       {activeTool === 'text' && <TextPanel />}
       {activeTool === 'shape' && <ShapePanel />}
       {activeTool === 'image' && <ImagePanel />}
-      {activeTool === 'select' && !hasSelection && <GarmentPicker />}
+      {(activeTool === 'garment' || (activeTool === 'select' && !hasSelection)) && <GarmentPicker />}
       {hasSelection && !isKid && <EffectsPanel />}
       {hasSelection && !isKid && <TransformPanel />}
       {hasSelection && !isKid && <BackgroundRemover />}
@@ -189,6 +189,7 @@ function Editor() {
         case 't': case 'T': s.setActiveTool('text'); break;
         case 's': case 'S': s.setActiveTool('shape'); break;
         case 'i': case 'I': s.setActiveTool('image'); break;
+        case 'g': case 'G': s.setActiveTool('garment'); break;
         case '[': s.setBrushWidth(Math.max(1, s.brushWidth - 2)); break;
         case ']': s.setBrushWidth(Math.min(80, s.brushWidth + 2)); break;
         case 'Delete': case 'Backspace': e.preventDefault(); s.removeObject(); break;
