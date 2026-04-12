@@ -181,7 +181,7 @@ function FamilyNav() {
 
 export default function GarmentLibrary({ onClose }: { onClose: () => void }) {
   const { loading, error, loadIndex, searchQuery, setSearchQuery, getFilteredGarments, sortBy, setSortBy, addToRecents, totalCount } = useLibraryStore();
-  const { loadFromImage } = useGarmentStore();
+  const { loadSvgAsZones } = useGarmentStore();
   const searchTimeout = useRef<ReturnType<typeof setTimeout>>(undefined);
   const [localQuery, setLocalQuery] = useState(searchQuery);
 
@@ -198,11 +198,10 @@ export default function GarmentLibrary({ onClose }: { onClose: () => void }) {
 
   const handleSelect = useCallback(async (garment: LibraryGarment) => {
     addToRecents(garment.id);
-    // Load SVG as garment template image
-    const svgUrl = garment.svgPath;
-    await loadFromImage(svgUrl, garment.name);
+    // Load SVG as individual colorable paths
+    await loadSvgAsZones(garment.svgPath, garment.name);
     onClose();
-  }, [addToRecents, loadFromImage, onClose]);
+  }, [addToRecents, loadSvgAsZones, onClose]);
 
   if (loading) {
     return (
