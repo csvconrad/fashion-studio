@@ -110,9 +110,10 @@ export default function DesignCanvas() {
       const delta = e.deltaY;
       const state = useCanvasStore.getState();
       const newZoom = Math.max(0.25, Math.min(3, state.zoomLevel + (delta > 0 ? -0.1 : 0.1)));
+      // Zoom towards the mouse pointer position
+      const point = canvas.getScenePoint(e);
+      canvas.zoomToPoint(point, newZoom);
       state.setZoomLevel(newZoom);
-      canvas.setZoom(newZoom);
-      canvas.renderAll();
     });
 
     return () => {
