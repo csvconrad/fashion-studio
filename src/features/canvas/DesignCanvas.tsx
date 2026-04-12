@@ -110,9 +110,21 @@ export default function DesignCanvas() {
       const delta = e.deltaY;
       const state = useCanvasStore.getState();
       const newZoom = Math.max(0.25, Math.min(3, state.zoomLevel + (delta > 0 ? -0.1 : 0.1)));
-      // Zoom towards the mouse pointer position
-      const point = canvas.getScenePoint(e);
-      canvas.zoomToPoint(point, newZoom);
+
+      // Calculate point in canvas coordinates, compensating for CSS transform scale
+      const canvasEl = (canvas as unknown as { lowerCanvasEl: HTMLCanvasElement }).lowerCanvasEl;
+      const rect = canvasEl.getBoundingClientRect();
+      const cssScaleX = CANVAS_WIDTH / rect.width;
+      const cssScaleY = CANVAS_HEIGHT / rect.height;
+      const mouseX = (e.clientX - rect.left) * cssScaleX;
+      const mouseY = (e.clientY - rect.top) * cssScaleY;
+
+      // Convert screen point to canvas scene point accounting for current viewport transform
+      const vpt = canvas.viewportTransform;
+      const pointX = (mouseX - vpt[4]) / vpt[0];
+      const pointY = (mouseY - vpt[5]) / vpt[3];
+
+      canvas.zoomToPoint({ x: pointX, y: pointY } as any, newZoom);
       state.setZoomLevel(newZoom);
     });
 
