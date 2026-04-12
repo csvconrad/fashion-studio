@@ -36,7 +36,7 @@ export const useGarmentStore = create<GarmentStore>((set, get) => ({
       id: layerId,
       name,
       visible: true,
-      locked: true,
+      locked: false,
       opacity: 1,
       type: 'garment',
     };
@@ -75,8 +75,9 @@ export const useGarmentStore = create<GarmentStore>((set, get) => ({
       top: (CANVAS_HEIGHT - imgH * scale) / 2,
       scaleX: scale,
       scaleY: scale,
-      selectable: false,
-      evented: false,
+      selectable: true,
+      evented: true,
+      hasControls: true,
       data: { objectId: crypto.randomUUID(), layerId, garmentId: 'custom' },
     });
 
