@@ -154,16 +154,13 @@ function Editor() {
   const [libraryOpen, setLibraryOpen] = useState(false);
 
   // Open library when library tool is selected
+  const activeTool = useCanvasStore((s) => s.activeTool);
   useEffect(() => {
-    const unsub = useCanvasStore.subscribe((state, prev) => {
-      if (state.activeTool === 'library' && prev.activeTool !== 'library') {
-        setLibraryOpen(true);
-        // Switch back to select so the tool doesn't stay "stuck"
-        useCanvasStore.getState().setActiveTool('select');
-      }
-    });
-    return unsub;
-  }, []);
+    if (activeTool === 'library') {
+      setLibraryOpen(true);
+      useCanvasStore.getState().setActiveTool('select');
+    }
+  }, [activeTool]);
 
   // ── Autosave every 30s ──
   useEffect(() => {
