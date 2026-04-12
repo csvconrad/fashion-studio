@@ -44,8 +44,28 @@ export const useGarmentStore = create<GarmentStore>((set, get) => ({
     const { layers } = useCanvasStore.getState();
     useCanvasStore.setState({ layers: [garmentLayer, ...layers] });
 
-    // Load image and center on canvas
-    const img = await FabricImage.fromURL(dataUrl);
+    // For SVG URLs: fetch the SVG, set explicit width/height, convert to data URL
+    let finalUrl = dataUrl;
+    if (dataUrl.endsWith('.svg') || dataUrl.includes('.svg')) {
+      try {
+        const res = await fetch(dataUrl);
+        let svgText = await res.text();
+        // Extract viewBox or width/height to determine aspect ratio
+        const vbMatch = svgText.match(/viewBox=["']([^"']+)["']/);
+        let svgW = 800, svgH = 600;
+        if (vbMatch) {
+          const parts = vbMatch[1].split(/\s+/).map(Number);
+          if (parts.length === 4) { svgW = parts[2]; svgH = parts[3]; }
+        }
+        // Ensure the SVG has explicit width/height for proper rendering
+        if (!svgText.includes('width=')) {
+          svgText = svgText.replace('<svg', `<svg width="${svgW}" height="${svgH}"`);
+        }
+        finalUrl = `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svgText)}`;
+      } catch { /* fallback to direct URL */ }
+    }
+
+    const img = await FabricImage.fromURL(finalUrl);
     const imgW = img.width ?? 400;
     const imgH = img.height ?? 600;
     const scale = Math.min((CANVAS_WIDTH * 0.75) / imgW, (CANVAS_HEIGHT * 0.75) / imgH, 1);
